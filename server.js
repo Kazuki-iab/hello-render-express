@@ -279,6 +279,7 @@ function card(label, value, note, tone = "", iconName = "spark") {
 function renderPage(message = "") {
   const data = calculateDashboard();
   const hasData = expenses.length > 0 || incomes.length > 0 || fixedCosts.length > 0;
+  const hasExpense = expenses.length > 0;
   const prediction =
     !hasData
       ? "支出を追加すると、月末の見通しを表示します。"
@@ -286,8 +287,8 @@ function renderPage(message = "") {
       ? `このペースなら、月末に ${yen(data.projectedBalance)} ほど残りそうです。`
       : `このペースだと、月末に ${yen(Math.abs(data.projectedBalance))} ほどオーバーしそうです。`;
   const riskClass = data.risk === "高" ? "risk-high" : data.risk === "中" ? "risk-mid" : "risk-low";
-  const heroAmount = hasData ? yen(data.remaining) : "まだデータがありません";
-  const heroSubcopy = hasData ? `今日あと ${yen(data.dailyRemaining)} 使えます` : "最初の支出を1行で追加しましょう";
+  const heroAmount = hasExpense ? yen(data.remaining) : "まだ支出がありません";
+  const heroSubcopy = hasExpense ? `今日あと ${yen(data.dailyRemaining)} 使えます` : "最初の支出を追加して、今月の残額を確認しましょう。";
 
   return `<!doctype html>
 <html lang="ja">
@@ -503,6 +504,112 @@ function renderPage(message = "") {
     .empty { color: var(--muted); text-align: center; padding: 30px 18px; line-height: 1.7; }
     .table-wrap { overflow-x: auto; }
     footer { color: var(--muted); text-align: center; padding: 26px 0 6px; }
+    .home-minimal {
+      min-height: calc(100vh - 96px);
+      display: grid;
+      align-items: center;
+      padding: 26px 0 34px;
+    }
+    .home-card {
+      max-width: 860px;
+      margin: 0 auto;
+      text-align: center;
+      display: grid;
+      gap: 22px;
+    }
+    .home-kicker { color: var(--muted); font-size: 14px; font-weight: 700; }
+    .home-card h1 {
+      margin: 0;
+      max-width: none;
+      color: var(--navy);
+      font-size: clamp(52px, 11vw, 128px);
+      line-height: .9;
+      letter-spacing: -.045em;
+      font-variant-numeric: tabular-nums;
+    }
+    .home-card h1.empty-title {
+      max-width: 720px;
+      margin: 0 auto;
+      font-size: clamp(34px, 7vw, 72px);
+      line-height: 1.05;
+      letter-spacing: -.03em;
+    }
+    .home-subcopy { margin: 0; color: var(--navy-soft); font-size: clamp(18px, 2.4vw, 26px); font-weight: 750; }
+    .home-forecast { margin: 0 auto; max-width: 620px; color: var(--muted); font-size: 15px; line-height: 1.8; }
+    .home-action { display: flex; justify-content: center; }
+    .primary-link { min-width: 168px; text-decoration: none; }
+    .message.home-message { max-width: 720px; margin: 0 auto 16px; }
+    .sub-actions {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 0 0 18px;
+    }
+    .sub-action {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .74);
+      padding: 12px 14px;
+      color: var(--navy);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 750;
+      text-align: center;
+      cursor: pointer;
+      transition: background .16s ease, border-color .16s ease, transform .16s ease;
+    }
+    .sub-action:hover { background: white; border-color: #cbd5e1; transform: translateY(-1px); }
+    details.disclosure {
+      scroll-margin-top: 24px;
+      margin-top: 12px;
+      background: rgba(255, 255, 255, .9);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, .045);
+      overflow: hidden;
+    }
+    details.disclosure > summary {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 18px 20px;
+      color: var(--navy);
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    details.disclosure > summary::-webkit-details-marker { display: none; }
+    details.disclosure > summary::after { content: "開く"; color: var(--muted); font-size: 12px; font-weight: 700; }
+    details.disclosure[open] > summary { border-bottom: 1px solid var(--line); }
+    details.disclosure[open] > summary::after { content: "閉じる"; }
+    .disclosure-body { padding: 20px; }
+    .secondary-forms {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+    .quiet-section {
+      margin-top: 18px;
+      display: grid;
+      gap: 12px;
+    }
+    .compact-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .mini-stat {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--panel-soft);
+      padding: 13px;
+    }
+    .mini-stat span { display: block; color: var(--muted); font-size: 12px; font-weight: 750; }
+    .mini-stat strong { display: block; margin-top: 5px; color: var(--navy); font-size: 18px; font-variant-numeric: tabular-nums; }
     @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes numberIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -510,6 +617,7 @@ function renderPage(message = "") {
       .hero, .layout { grid-template-columns: 1fr; }
       .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .quick-form { grid-template-columns: 1fr; }
+      .sub-actions, .compact-metrics, .secondary-forms { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 560px) {
       .shell { padding: 16px; }
@@ -522,6 +630,8 @@ function renderPage(message = "") {
       .quick input { font-size: 18px; padding: 18px; }
       .btn { width: 100%; }
       .forecast-grid { grid-template-columns: 1fr; }
+      .home-minimal { min-height: calc(100vh - 120px); padding-top: 10px; }
+      .sub-actions, .compact-metrics, .secondary-forms { grid-template-columns: 1fr; }
       th, td { padding: 10px 6px; }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -533,97 +643,54 @@ function renderPage(message = "") {
   <div class="shell">
     <header class="topbar">
       <div class="logo"><span class="logo-mark">${logoMark()}</span><span>Money Pace</span></div>
-      <div class="tagline">入力は短く。お金の流れは見やすく。</div>
     </header>
 
-    <div class="hero">
-      <section class="hero-main">
-        <span class="eyebrow">${icon("spark")} 学生・若手社会人のための家計管理</span>
-        <h1>今月あといくら使えるかが、ひと目で分かる。</h1>
-        <p>支出は1行で追加。今日使える目安と月末の見通しを、必要な時にすぐ確認できます。</p>
-        <div class="hero-amount">
-          <span>あと使える金額</span>
-          <strong class="${hasData ? "" : "empty-hero"}">${heroAmount}</strong>
-          <div class="today-budget">${heroSubcopy}</div>
+    ${message ? `<div class="message home-message">${escapeHtml(message)}</div>` : ""}
+
+    <main class="home-minimal">
+      <section class="home-card">
+        <div class="home-kicker">あと使える金額</div>
+        <h1 class="${hasExpense ? "" : "empty-title"}">${heroAmount}</h1>
+        <p class="home-subcopy">${heroSubcopy}</p>
+        <p class="home-forecast">${prediction}</p>
+        <div class="home-action">
+          <a class="btn primary-link" href="#expense-panel" data-open="expense-panel">支出を追加</a>
         </div>
       </section>
-      <aside class="focus-card ${riskClass}">
-        <h2>月末予測</h2>
-        <div class="forecast-text">${prediction}</div>
-        <div class="forecast-grid">
-          <div><span>予測残額</span><strong>${hasData ? yen(data.projectedBalance) : "-"}</strong></div>
-          <div><span>赤字リスク</span><strong>${hasData ? data.risk : "-"}</strong></div>
-          <div><span>残り日数</span><strong>${data.daysLeft}日</strong></div>
-          <div><span>今日の目安</span><strong>${hasData ? yen(data.dailyRemaining) : "-"}</strong></div>
-        </div>
-      </aside>
-    </div>
+    </main>
 
-    <section class="quick">
-      <div class="quick-head">
-        <div>
-          <h2>クイック入力</h2>
-          <p>メモと金額だけで支出を追加できます。カテゴリは内容から推定します。</p>
-        </div>
-        <div class="examples">
-          <span class="example">ラーメン 950</span>
-          <span class="example">電車 420</span>
-          <span class="example">Netflix 1490</span>
-          <span class="example">カフェ 650</span>
-        </div>
-      </div>
-      <form method="post" action="/quick-expense" class="quick-form">
-        <label class="sr-only" for="quickText">支出を1行で入力</label>
-        <input id="quickText" name="quickText" placeholder="ラーメン 950 / 電車 420 / Netflix 1490" autocomplete="off" required>
-        <button class="btn" type="submit">支出を追加</button>
-      </form>
-    </section>
+    <nav class="sub-actions" aria-label="サブ操作">
+      <a class="sub-action" href="#income-panel" data-open="income-panel">収入</a>
+      <a class="sub-action" href="#fixed-panel" data-open="fixed-panel">固定費</a>
+      <a class="sub-action" href="#budget-panel" data-open="budget-panel">予算</a>
+      <a class="sub-action" href="#analysis-panel" data-open="analysis-panel">分析</a>
+    </nav>
 
-    <section class="metrics">
-      ${card("今月の予算", yen(monthlyBudget), "あとから変更できます", "", "target")}
-      ${card("収入", yen(data.incomeTotal), `${data.monthlyIncomes.length}件`, "good", "wallet")}
-      ${card("支出", yen(data.expenseTotal), `${data.monthlyExpenses.length}件`, "", "receipt")}
-      ${card("固定費", yen(data.fixedTotal), `${fixedCosts.length}件`, "", "home")}
-      ${card("支出が多いカテゴリ", hasData ? yen(data.topCategory.amount) : "-", hasData ? data.topCategory.category : "記録後に表示", "", "chart")}
-      ${card("月末の見込み", hasData ? yen(data.projectedBalance) : "-", hasData ? (data.projectedBalance >= 0 ? "残る見込み" : "赤字見込み") : "記録後に表示", data.projectedBalance < 0 ? "bad" : "good", "trend")}
-    </section>
-
-    ${message ? `<div class="message">${escapeHtml(message)}</div>` : ""}
-
-    <div class="layout">
-      <div class="stack">
-        <section class="panel">
-          <h2>予算設定</h2>
-          <form method="post" action="/budget">
-            <label>今月の予算</label>
-            <input name="budget" type="number" min="1" value="${monthlyBudget}" required>
-            <button class="btn" type="submit">予算を更新</button>
+    <details class="disclosure" id="expense-panel">
+      <summary>支出を追加</summary>
+      <div class="disclosure-body">
+        <section class="quick">
+          <div class="quick-head">
+            <div>
+              <h2>クイック入力</h2>
+              <p>メモと金額だけで支出を追加できます。カテゴリは内容から推定します。</p>
+            </div>
+            <div class="examples">
+              <span class="example">ラーメン 950</span>
+              <span class="example">電車 420</span>
+              <span class="example">Netflix 1490</span>
+              <span class="example">カフェ 650</span>
+            </div>
+          </div>
+          <form method="post" action="/quick-expense" class="quick-form">
+            <label class="sr-only" for="quickText">支出を1行で入力</label>
+            <input id="quickText" name="quickText" placeholder="ラーメン 950 / 電車 420 / Netflix 1490" autocomplete="off" required>
+            <button class="btn" type="submit">支出を追加</button>
           </form>
         </section>
 
-        <section class="panel">
-          <h2>今月のアドバイス</h2>
-          <div class="advice">${advice(data).map((item) => `<div>${escapeHtml(item)}</div>`).join("")}</div>
-        </section>
-
-        <section class="panel">
-          <h2>カテゴリ別の支出</h2>
-          <div class="bars">
-            ${data.byCategory
-              .map(
-                (item) => `<div class="bar-row">
-                  <div class="bar-top"><strong>${escapeHtml(item.category)}</strong><span>${yen(item.amount)}</span></div>
-                  <div class="track"><div class="fill" style="width:${progressPercent(item.amount, data.maxCategory)}%"></div></div>
-                </div>`
-              )
-              .join("")}
-          </div>
-        </section>
-      </div>
-
-      <div class="stack">
         <section class="section">
-          <h2>支出を追加</h2>
+          <h2>通常入力</h2>
           <form method="post" action="/expenses">
             <div class="grid-2">
               <div><label>金額</label><input name="amount" type="number" min="1" placeholder="例: 1200" required></div>
@@ -638,6 +705,16 @@ function renderPage(message = "") {
           </form>
         </section>
 
+        <section class="quiet-section">
+          <h2>支出履歴</h2>
+          <div class="table-wrap"><table><tr><th>日付</th><th>金額</th><th>カテゴリ</th><th>メモ</th><th>支払い方法</th><th></th></tr>${renderHistoryRows(expenses, "expense")}</table></div>
+        </section>
+      </div>
+    </details>
+
+    <details class="disclosure" id="income-panel">
+      <summary>収入</summary>
+      <div class="disclosure-body">
         <section class="section">
           <h2>収入を追加</h2>
           <form method="post" action="/incomes">
@@ -650,9 +727,18 @@ function renderPage(message = "") {
             <button class="btn" type="submit">収入を追加</button>
           </form>
         </section>
+        <section class="quiet-section">
+          <h2>収入履歴</h2>
+          <div class="table-wrap"><table><tr><th>日付</th><th>金額</th><th>収入源</th><th>メモ</th><th></th></tr>${renderHistoryRows(incomes, "income")}</table></div>
+        </section>
+      </div>
+    </details>
 
+    <details class="disclosure" id="fixed-panel">
+      <summary>固定費</summary>
+      <div class="disclosure-body">
         <section class="section">
-          <h2>固定費を管理</h2>
+          <h2>固定費を追加</h2>
           <form method="post" action="/fixed-costs">
             <div class="grid-2">
               <div><label>名前</label><input name="name" placeholder="例: スマホ代" required></div>
@@ -665,27 +751,65 @@ function renderPage(message = "") {
             <button class="btn" type="submit">固定費を追加</button>
           </form>
         </section>
+        <section class="quiet-section">
+          <h2>固定費一覧</h2>
+          <div class="table-wrap"><table><tr><th>名前</th><th>金額</th><th>カテゴリ</th><th>支払日</th><th></th></tr>${renderHistoryRows(fixedCosts, "fixed")}</table></div>
+        </section>
       </div>
-    </div>
+    </details>
 
-    <section class="section" style="margin-top:18px;">
-      <h2>支出履歴</h2>
-      <div class="table-wrap"><table><tr><th>日付</th><th>金額</th><th>カテゴリ</th><th>メモ</th><th>支払い方法</th><th></th></tr>${renderHistoryRows(expenses, "expense")}</table></div>
-    </section>
+    <details class="disclosure" id="budget-panel">
+      <summary>予算</summary>
+      <div class="disclosure-body">
+        <section class="section">
+          <h2>予算設定</h2>
+          <form method="post" action="/budget">
+            <label>今月の予算</label>
+            <input name="budget" type="number" min="1" value="${monthlyBudget}" required>
+            <button class="btn" type="submit">予算を更新</button>
+          </form>
+        </section>
+      </div>
+    </details>
 
-    <section class="section" style="margin-top:18px;">
-      <h2>収入履歴</h2>
-      <div class="table-wrap"><table><tr><th>日付</th><th>金額</th><th>収入源</th><th>メモ</th><th></th></tr>${renderHistoryRows(incomes, "income")}</table></div>
-    </section>
-
-    <section class="section" style="margin-top:18px;">
-      <h2>固定費一覧</h2>
-      <div class="table-wrap"><table><tr><th>名前</th><th>金額</th><th>カテゴリ</th><th>支払日</th><th></th></tr>${renderHistoryRows(fixedCosts, "fixed")}</table></div>
-    </section>
+    <details class="disclosure" id="analysis-panel">
+      <summary>分析</summary>
+      <div class="disclosure-body">
+        <div class="compact-metrics">
+          <div class="mini-stat"><span>予算</span><strong>${yen(monthlyBudget)}</strong></div>
+          <div class="mini-stat"><span>収入</span><strong>${yen(data.incomeTotal)}</strong></div>
+          <div class="mini-stat"><span>支出</span><strong>${yen(data.expenseTotal)}</strong></div>
+          <div class="mini-stat"><span>固定費</span><strong>${yen(data.fixedTotal)}</strong></div>
+        </div>
+        <section class="section">
+          <h2>カテゴリ別の支出</h2>
+          <div class="bars">
+            ${data.byCategory
+              .map(
+                (item) => `<div class="bar-row">
+                  <div class="bar-top"><strong>${escapeHtml(item.category)}</strong><span>${yen(item.amount)}</span></div>
+                  <div class="track"><div class="fill" style="width:${progressPercent(item.amount, data.maxCategory)}%"></div></div>
+                </div>`
+              )
+              .join("")}
+          </div>
+        </section>
+        <section class="quiet-section">
+          <h2>今月のアドバイス</h2>
+          <div class="advice">${advice(data).map((item) => `<div>${escapeHtml(item)}</div>`).join("")}</div>
+        </section>
+      </div>
+    </details>
 
     <footer>Money Pace はデモ用アプリです。入力したデータはサーバー再起動時にリセットされます。</footer>
   </div>
   <script>
+    document.querySelectorAll("[data-open]").forEach((trigger) => {
+      trigger.addEventListener("click", () => {
+        const panel = document.getElementById(trigger.dataset.open);
+        if (panel) panel.open = true;
+      });
+    });
     document.querySelectorAll("form").forEach((form) => {
       form.addEventListener("submit", () => {
         const button = form.querySelector(".btn");
