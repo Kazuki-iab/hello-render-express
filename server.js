@@ -281,13 +281,13 @@ function renderPage(message = "") {
   const hasData = expenses.length > 0 || incomes.length > 0 || fixedCosts.length > 0;
   const prediction =
     !hasData
-      ? "支出を記録すると、月末の見通しを自動で表示します。"
+      ? "支出を追加すると、月末の見通しを表示します。"
       : data.projectedBalance >= 0
       ? `このペースなら、月末に ${yen(data.projectedBalance)} ほど残りそうです。`
       : `このペースだと、月末に ${yen(Math.abs(data.projectedBalance))} ほどオーバーしそうです。`;
   const riskClass = data.risk === "高" ? "risk-high" : data.risk === "中" ? "risk-mid" : "risk-low";
   const heroAmount = hasData ? yen(data.remaining) : "まだデータがありません";
-  const heroSubcopy = hasData ? `今日あと ${yen(data.dailyRemaining)} 使えます` : "最初の支出を1行で記録しましょう";
+  const heroSubcopy = hasData ? `今日あと ${yen(data.dailyRemaining)} 使えます` : "最初の支出を1行で追加しましょう";
 
   return `<!doctype html>
 <html lang="ja">
@@ -310,8 +310,8 @@ function renderPage(message = "") {
       --emerald-soft: #ecfdf5;
       --danger: #dc2626;
       --warning: #b45309;
-      --shadow: 0 24px 70px rgba(15, 23, 42, 0.10);
-      --soft-shadow: 0 14px 36px rgba(15, 23, 42, 0.07);
+      --shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+      --soft-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
       --focus: 0 0 0 4px rgba(16, 185, 129, 0.18);
     }
     * { box-sizing: border-box; }
@@ -319,7 +319,7 @@ function renderPage(message = "") {
       margin: 0;
       font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background:
-        radial-gradient(circle at top left, rgba(16, 185, 129, 0.16), transparent 34rem),
+        radial-gradient(circle at top left, rgba(16, 185, 129, 0.08), transparent 34rem),
         linear-gradient(180deg, #ffffff 0%, var(--bg) 42%);
       color: var(--ink);
       letter-spacing: 0;
@@ -330,7 +330,7 @@ function renderPage(message = "") {
     .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
     .logo { display: flex; align-items: center; gap: 12px; color: var(--navy); font-size: 23px; font-weight: 850; letter-spacing: -.01em; }
     .logo-mark { display: grid; place-items: center; width: 42px; height: 42px; }
-    .brand-mark { width: 42px; height: 42px; filter: drop-shadow(0 12px 20px rgba(15, 23, 42, .16)); }
+    .brand-mark { width: 42px; height: 42px; filter: drop-shadow(0 8px 14px rgba(15, 23, 42, .12)); }
     .brand-mark rect { fill: var(--navy); }
     .brand-mark path { fill: none; stroke: white; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
     .topbar .tagline { color: var(--muted); font-size: 14px; }
@@ -339,10 +339,10 @@ function renderPage(message = "") {
       position: relative;
       overflow: hidden;
       background:
-        radial-gradient(circle at 82% 76%, rgba(16, 185, 129, .24), transparent 19rem),
-        linear-gradient(145deg, #050b18 0%, var(--navy) 52%, #123142 100%);
+        radial-gradient(circle at 82% 78%, rgba(16, 185, 129, .14), transparent 20rem),
+        linear-gradient(145deg, #07111f 0%, var(--navy) 58%, #132238 100%);
       color: white;
-      border-radius: 32px;
+      border-radius: 24px;
       padding: clamp(26px, 5vw, 46px);
       box-shadow: var(--shadow);
       min-height: 360px;
@@ -354,22 +354,21 @@ function renderPage(message = "") {
       width: 300px;
       height: 300px;
       border-radius: 50%;
-      background: rgba(16, 185, 129, 0.24);
-      filter: blur(2px);
+      background: rgba(16, 185, 129, 0.12);
     }
-    .eyebrow { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); padding: 8px 12px; color: rgba(255,255,255,.84); font-size: 13px; font-weight: 750; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.10); padding: 8px 12px; color: rgba(255,255,255,.84); font-size: 13px; font-weight: 650; }
     .eyebrow svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
-    h1 { margin: 22px 0 12px; max-width: 720px; font-size: clamp(38px, 5.4vw, 72px); line-height: 1.01; letter-spacing: -.02em; }
+    h1 { margin: 22px 0 12px; max-width: 720px; font-size: clamp(36px, 5vw, 64px); line-height: 1.04; letter-spacing: -.02em; }
     .hero-main p { color: rgba(255, 255, 255, 0.78); font-size: 16px; line-height: 1.8; max-width: 640px; }
     .hero-amount { margin-top: 30px; position: relative; z-index: 1; }
     .hero-amount span { display: block; color: rgba(255, 255, 255, 0.72); font-size: 14px; font-weight: 700; }
     .hero-amount strong { display: block; margin-top: 8px; font-size: clamp(60px, 10vw, 120px); line-height: .88; letter-spacing: -.04em; font-variant-numeric: tabular-nums; animation: numberIn .34s ease both; }
     .hero-amount .empty-hero { max-width: 620px; font-size: clamp(34px, 6vw, 66px); line-height: 1.05; letter-spacing: -.02em; }
-    .today-budget { display: inline-flex; margin-top: 18px; border-radius: 18px; padding: 12px 16px; background: rgba(255,255,255,.12); color: white; font-weight: 800; }
+    .today-budget { display: inline-flex; margin-top: 18px; border-radius: 14px; padding: 11px 14px; background: rgba(255,255,255,.10); color: white; font-weight: 700; }
     .focus-card {
       background: rgba(255, 255, 255, 0.82);
       border: 1px solid rgba(255, 255, 255, 0.78);
-      border-radius: 32px;
+      border-radius: 16px;
       padding: 24px;
       box-shadow: var(--shadow);
       backdrop-filter: blur(18px);
@@ -380,7 +379,7 @@ function renderPage(message = "") {
     .focus-card h2, .section h2, .panel h2 { margin: 0; color: var(--navy); font-size: 20px; letter-spacing: 0; }
     .forecast-text { font-size: 21px; font-weight: 850; line-height: 1.55; color: var(--navy); letter-spacing: -.01em; }
     .forecast-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-    .forecast-grid div { border: 1px solid var(--line); border-radius: 18px; padding: 14px; background: rgba(248, 250, 252, .86); }
+    .forecast-grid div { border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: rgba(248, 250, 252, .86); }
     .forecast-grid span { display: block; color: var(--muted); font-size: 12px; font-weight: 800; }
     .forecast-grid strong { display: block; margin-top: 6px; color: var(--navy); font-size: 22px; font-weight: 900; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
     .risk-low .forecast-grid div:nth-child(2) strong { color: var(--emerald-dark); }
@@ -389,19 +388,17 @@ function renderPage(message = "") {
     .muted { color: var(--muted); font-size: 13px; line-height: 1.7; }
     .quick {
       margin: 18px 0;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.9)),
-        radial-gradient(circle at top right, rgba(16, 185, 129, .22), transparent 18rem);
-      border: 1px solid rgba(16, 185, 129, 0.2);
-      border-radius: 30px;
+      background: var(--panel);
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      border-radius: 22px;
       padding: 24px;
       box-shadow: var(--shadow);
     }
     .quick-head { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 16px; }
-    .quick h2 { font-size: clamp(28px, 3.4vw, 40px); letter-spacing: -.02em; }
+    .quick h2 { font-size: clamp(24px, 3vw, 34px); letter-spacing: -.02em; }
     .quick p { color: var(--muted); margin: 8px 0 0; line-height: 1.7; }
     .quick-form { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 12px; align-items: center; }
-    .quick input { margin: 0; border-radius: 22px; padding: 22px 23px; font-size: 23px; border: 1px solid var(--line); background: var(--panel-soft); box-shadow: inset 0 1px 0 rgba(255,255,255,.65); }
+    .quick input { margin: 0; border-radius: 14px; padding: 18px 19px; font-size: 20px; border: 1px solid var(--line); background: var(--panel-soft); box-shadow: inset 0 1px 0 rgba(255,255,255,.65); }
     .examples { display: flex; flex-wrap: wrap; gap: 8px; }
     .example { border-radius: 999px; background: var(--emerald-soft); color: #047857; padding: 7px 11px; font-size: 13px; font-weight: 700; }
     .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 14px; margin: 18px 0; }
@@ -416,8 +413,8 @@ function renderPage(message = "") {
       box-shadow: 0 8px 26px rgba(15, 23, 42, 0.045);
       transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
     }
-    .metric:hover, .panel:hover, .section:hover { transform: translateY(-2px); box-shadow: var(--soft-shadow); background: white; }
-    .metric-icon { flex: 0 0 34px; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 13px; background: var(--panel-soft); }
+    .metric:hover, .panel:hover, .section:hover { transform: translateY(-1px); box-shadow: var(--soft-shadow); background: white; }
+    .metric-icon { flex: 0 0 34px; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--panel-soft); }
     .metric-icon svg { width: 19px; height: 19px; fill: none; stroke: var(--navy); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .metric span, label { color: var(--muted); font-size: 13px; font-weight: 700; }
     .metric strong { display: block; margin: 7px 0 3px; color: var(--navy); font-size: 22px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
@@ -429,7 +426,7 @@ function renderPage(message = "") {
     .panel, .section {
       background: rgba(255, 255, 255, 0.88);
       border: 1px solid rgba(226, 232, 240, 0.95);
-      border-radius: 26px;
+      border-radius: 18px;
       padding: 22px;
       box-shadow: 0 10px 30px rgba(15, 23, 42, 0.045);
       transition: transform .18s ease, box-shadow .18s ease;
@@ -438,8 +435,8 @@ function renderPage(message = "") {
     input, select {
       width: 100%;
       border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 15px 16px;
+      border-radius: 12px;
+      padding: 13px 14px;
       margin: 8px 0 14px;
       background: #ffffff;
       color: var(--ink);
@@ -453,17 +450,19 @@ function renderPage(message = "") {
       overflow: hidden;
       width: 100%;
       border: 0;
-      border-radius: 16px;
-      padding: 16px 18px;
-      background: var(--emerald);
+      border-radius: 12px;
+      padding: 12px 16px;
+      background: var(--navy);
       color: white;
-      font-weight: 850;
+      font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 14px 30px rgba(16, 185, 129, 0.24);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
       transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
     }
-    .btn:hover { transform: translateY(-1px); background: var(--emerald-dark); box-shadow: 0 18px 34px rgba(16, 185, 129, 0.28); }
-    .btn:active { transform: translateY(1px) scale(.99); box-shadow: 0 10px 22px rgba(16, 185, 129, 0.22); }
+    .quick .btn { background: var(--emerald-dark); box-shadow: 0 8px 18px rgba(5, 150, 105, 0.18); }
+    .btn:hover { transform: translateY(-1px); background: var(--navy-soft); box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14); }
+    .quick .btn:hover { background: #047857; box-shadow: 0 10px 22px rgba(5, 150, 105, 0.22); }
+    .btn:active { transform: translateY(1px); box-shadow: 0 5px 12px rgba(15, 23, 42, 0.10); }
     .btn:focus-visible, .ghost:focus-visible { outline: none; box-shadow: var(--focus); }
     .btn.is-loading { color: transparent; pointer-events: none; }
     .btn.is-loading::after {
@@ -482,9 +481,9 @@ function renderPage(message = "") {
     .ghost:hover { transform: translateY(-1px); background: #f9fafb; }
     .danger { color: var(--danger); }
     .inline-form { display: inline; }
-    .message { margin-bottom: 14px; border-radius: 16px; padding: 13px 15px; background: var(--emerald-soft); color: #047857; font-weight: 800; animation: rise .24s ease both; }
+    .message { margin-bottom: 14px; border-radius: 12px; padding: 12px 14px; background: var(--emerald-soft); color: #047857; font-weight: 700; animation: rise .24s ease both; }
     .advice { display: grid; gap: 10px; }
-    .advice div { background: var(--emerald-soft); border-radius: 16px; padding: 13px 14px; color: #065f46; line-height: 1.7; }
+    .advice div { background: var(--emerald-soft); border-radius: 12px; padding: 13px 14px; color: #065f46; line-height: 1.7; }
     .bars { display: grid; gap: 12px; }
     .bar-row { display: grid; gap: 7px; }
     .bar-top { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--navy); }
@@ -528,14 +527,14 @@ function renderPage(message = "") {
   <div class="shell">
     <header class="topbar">
       <div class="logo"><span class="logo-mark">${logoMark()}</span><span>Money Pace</span></div>
-      <div class="tagline">入力は短く。お金の流れは、ひと目で。</div>
+      <div class="tagline">入力は短く。お金の流れは見やすく。</div>
     </header>
 
     <div class="hero">
       <section class="hero-main">
-        <span class="eyebrow">${icon("spark")} 学生・若手社会人のための支出管理</span>
+        <span class="eyebrow">${icon("spark")} 学生・若手社会人のための家計管理</span>
         <h1>今月あといくら使えるかが、ひと目で分かる。</h1>
-        <p>支出は1行で記録。今日の使える目安と月末の見通しを、毎日開きたくなる画面で確認できます。</p>
+        <p>支出は1行で追加。今日使える目安と月末の見通しを、必要な時にすぐ確認できます。</p>
         <div class="hero-amount">
           <span>あと使える金額</span>
           <strong class="${hasData ? "" : "empty-hero"}">${heroAmount}</strong>
@@ -558,7 +557,7 @@ function renderPage(message = "") {
       <div class="quick-head">
         <div>
           <h2>爆速入力</h2>
-          <p>メモと金額だけで、支出をすばやく記録できます。カテゴリは自動で推定します。</p>
+          <p>メモと金額だけで支出を追加できます。カテゴリは内容から推定します。</p>
         </div>
         <div class="examples">
           <span class="example">ラーメン 950</span>
@@ -570,7 +569,7 @@ function renderPage(message = "") {
       <form method="post" action="/quick-expense" class="quick-form">
         <label class="sr-only" for="quickText">支出を1行で入力</label>
         <input id="quickText" name="quickText" placeholder="ラーメン 950 / 電車 420 / Netflix 1490" autocomplete="off" required>
-        <button class="btn" type="submit">記録する</button>
+        <button class="btn" type="submit">支出を追加</button>
       </form>
     </section>
 
@@ -592,7 +591,7 @@ function renderPage(message = "") {
           <form method="post" action="/budget">
             <label>今月の予算</label>
             <input name="budget" type="number" min="1" value="${monthlyBudget}" required>
-            <button class="btn" type="submit">予算を保存</button>
+            <button class="btn" type="submit">予算を更新</button>
           </form>
         </section>
 
@@ -629,7 +628,7 @@ function renderPage(message = "") {
               <div><label>日付</label><input name="date" type="date" value="${today()}" required></div>
               <div><label>支払い方法</label><select name="paymentMethod">${optionTags(paymentMethods)}</select></div>
             </div>
-            <button class="btn" type="submit">支出を登録</button>
+            <button class="btn" type="submit">支出を追加</button>
           </form>
         </section>
 
@@ -642,7 +641,7 @@ function renderPage(message = "") {
             </div>
             <label>メモ</label><input name="memo" placeholder="例: 6月分、単発案件">
             <label>日付</label><input name="date" type="date" value="${today()}" required>
-            <button class="btn" type="submit">収入を登録</button>
+            <button class="btn" type="submit">収入を追加</button>
           </form>
         </section>
 
@@ -657,7 +656,7 @@ function renderPage(message = "") {
               <div><label>カテゴリ</label><select name="category">${optionTags(expenseCategories, "サブスク")}</select></div>
               <div><label>支払日</label><input name="payDay" type="number" min="1" max="31" placeholder="25" required></div>
             </div>
-            <button class="btn" type="submit">固定費を登録</button>
+            <button class="btn" type="submit">固定費を追加</button>
           </form>
         </section>
       </div>
@@ -683,7 +682,7 @@ function renderPage(message = "") {
   <script>
     document.querySelectorAll("form").forEach((form) => {
       form.addEventListener("submit", () => {
-        const button = form.querySelector("button");
+      const button = form.querySelector(".btn");
         if (!button || button.classList.contains("danger")) return;
         button.classList.add("is-loading");
         button.setAttribute("aria-busy", "true");
@@ -705,22 +704,22 @@ app.post("/quick-expense", (req, res) => {
     return;
   }
   addExpense(parsed);
-  res.redirect("/?message=" + encodeURIComponent(`${parsed.memo}を「${parsed.category}」として記録しました`));
+  res.redirect("/?message=" + encodeURIComponent(`${parsed.memo}を「${parsed.category}」として追加しました`));
 });
 
 app.post("/expenses", (req, res) => {
   addExpense(req.body);
-  res.redirect("/?message=" + encodeURIComponent("支出を登録しました"));
+  res.redirect("/?message=" + encodeURIComponent("支出を追加しました"));
 });
 
 app.post("/incomes", (req, res) => {
   addIncome(req.body);
-  res.redirect("/?message=" + encodeURIComponent("収入を登録しました"));
+  res.redirect("/?message=" + encodeURIComponent("収入を追加しました"));
 });
 
 app.post("/fixed-costs", (req, res) => {
   addFixedCost(req.body);
-  res.redirect("/?message=" + encodeURIComponent("固定費を登録しました"));
+  res.redirect("/?message=" + encodeURIComponent("固定費を追加しました"));
 });
 
 app.post("/budget", (req, res) => {
