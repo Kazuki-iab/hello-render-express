@@ -203,7 +203,7 @@ function progressPercent(value, max) {
 function renderHistoryRows(items, type) {
   if (items.length === 0) {
     const colspan = type === "expense" ? 6 : type === "income" ? 5 : 5;
-    return `<tr><td colspan="${colspan}" class="empty">まだ登録がありません</td></tr>`;
+    return `<tr><td colspan="${colspan}" class="empty">まだデータがありません</td></tr>`;
   }
 
   return items
@@ -443,12 +443,17 @@ function renderPage(message = "") {
       outline: none;
       transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
     }
+    .quick .btn { width: 100%; }
     input:focus, select:focus { border-color: var(--emerald); box-shadow: var(--focus); background: white; }
     .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .btn {
       position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       overflow: hidden;
-      width: 100%;
+      width: auto;
+      min-width: 124px;
       border: 0;
       border-radius: 12px;
       padding: 12px 16px;
@@ -515,6 +520,7 @@ function renderPage(message = "") {
       .grid-2 { grid-template-columns: 1fr; }
       .quick-head { display: block; }
       .quick input { font-size: 18px; padding: 18px; }
+      .btn { width: 100%; }
       .forecast-grid { grid-template-columns: 1fr; }
       th, td { padding: 10px 6px; }
     }
@@ -556,7 +562,7 @@ function renderPage(message = "") {
     <section class="quick">
       <div class="quick-head">
         <div>
-          <h2>爆速入力</h2>
+          <h2>クイック入力</h2>
           <p>メモと金額だけで支出を追加できます。カテゴリは内容から推定します。</p>
         </div>
         <div class="examples">
@@ -682,7 +688,7 @@ function renderPage(message = "") {
   <script>
     document.querySelectorAll("form").forEach((form) => {
       form.addEventListener("submit", () => {
-      const button = form.querySelector(".btn");
+        const button = form.querySelector(".btn");
         if (!button || button.classList.contains("danger")) return;
         button.classList.add("is-loading");
         button.setAttribute("aria-busy", "true");
