@@ -179,19 +179,19 @@ function advice(data) {
   const food = data.byCategory.find((item) => item.category === "食費")?.amount || 0;
 
   if (data.expenseTotal > 0 && food / data.expenseTotal >= 0.4) {
-    messages.push("食費がやや多めです。コンビニと外食を少しだけ見直すと効きます。");
+    messages.push("食費が少し多めです。外食やコンビニを少し抑えるだけで、月末の余裕が作れます。");
   }
   if (data.fixedTotal / monthlyBudget >= 0.3) {
-    messages.push("固定費が重めです。サブスクや通信費の棚卸しチャンスです。");
+    messages.push("固定費の割合が高めです。サブスクや通信費を見直すと、毎月の負担を軽くできます。");
   }
   if (data.remaining < monthlyBudget * 0.15) {
-    messages.push("残額が少なめです。今週は大きな出費を抑えると安心です。");
+    messages.push("残額が少なくなっています。今週は大きな買い物を控えると安心です。");
   }
   if (data.projectedBalance >= monthlyBudget * 0.15 && data.risk === "低") {
-    messages.push("今月はかなり良いペースです。余った分を貯金に回せそうです。");
+    messages.push("今月はかなり良いペースです。余った分を貯金や来月の予備費に回せそうです。");
   }
   if (messages.length === 0) {
-    messages.push("今のところ安定ペースです。爆速入力で記録を続けましょう。");
+    messages.push("今のところ安定したペースです。気づいた時に1行で記録していきましょう。");
   }
   return messages;
 }
@@ -244,11 +244,14 @@ function deleteButton(action) {
   return `<form method="post" action="${action}" class="inline-form"><button class="ghost danger" type="submit">削除</button></form>`;
 }
 
-function card(label, value, note, tone = "") {
+function card(label, value, note, tone = "", icon = "•") {
   return `<article class="metric ${tone}">
-    <span>${label}</span>
-    <strong>${value}</strong>
-    <small>${note}</small>
+    <div class="metric-icon">${icon}</div>
+    <div>
+      <span>${label}</span>
+      <strong>${value}</strong>
+      <small>${note}</small>
+    </div>
   </article>`;
 }
 
@@ -256,8 +259,8 @@ function renderPage(message = "") {
   const data = calculateDashboard();
   const prediction =
     data.projectedBalance >= 0
-      ? `このペースだと月末に ${yen(data.projectedBalance)} 余りそうです`
-      : `このペースだと月末に ${yen(Math.abs(data.projectedBalance))} オーバーしそうです`;
+      ? `このペースなら、月末に ${yen(data.projectedBalance)} ほど残りそうです。`
+      : `このペースだと、月末に ${yen(Math.abs(data.projectedBalance))} ほどオーバーしそうです。`;
   const riskClass = data.risk === "高" ? "risk-high" : data.risk === "中" ? "risk-mid" : "risk-low";
 
   return `<!doctype html>
@@ -268,157 +271,269 @@ function renderPage(message = "") {
   <title>Money Pace</title>
   <style>
     :root {
-      --bg: #f4f7f6;
+      --bg: #f6f8fb;
       --panel: #ffffff;
-      --ink: #172026;
+      --panel-soft: #f8fafc;
+      --navy: #0f172a;
+      --navy-soft: #1e293b;
+      --ink: #111827;
       --muted: #667085;
-      --line: #dbe5e1;
-      --green: #0f766e;
-      --green-dark: #115e59;
-      --blue: #2563eb;
-      --amber: #b45309;
-      --red: #b42318;
-      --soft-green: #e7f5f1;
-      --shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+      --line: #e5e7eb;
+      --emerald: #10b981;
+      --emerald-dark: #059669;
+      --emerald-soft: #ecfdf5;
+      --danger: #dc2626;
+      --warning: #b45309;
+      --shadow: 0 24px 70px rgba(15, 23, 42, 0.10);
+      --soft-shadow: 0 14px 36px rgba(15, 23, 42, 0.07);
     }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(16, 185, 129, 0.16), transparent 34rem),
+        linear-gradient(180deg, #ffffff 0%, var(--bg) 42%);
+      color: var(--ink);
+      letter-spacing: 0;
+    }
     button, input, select { font: inherit; }
-    .shell { max-width: 1180px; margin: 0 auto; padding: 24px; }
-    .hero { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr); gap: 18px; align-items: stretch; }
-    .hero-main { background: linear-gradient(135deg, #0f766e, #123c69); color: white; border-radius: 24px; padding: 28px; box-shadow: var(--shadow); }
-    .brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 32px; }
-    .brand strong { font-size: 22px; letter-spacing: 0; }
-    .badge { display: inline-flex; align-items: center; border-radius: 999px; background: rgba(255, 255, 255, 0.15); padding: 8px 12px; font-size: 13px; }
-    h1 { margin: 0; font-size: clamp(32px, 5vw, 58px); line-height: 1; letter-spacing: 0; }
-    .hero-main p { color: rgba(255, 255, 255, 0.82); font-size: 16px; max-width: 660px; }
-    .remaining { display: flex; gap: 18px; flex-wrap: wrap; align-items: end; margin-top: 22px; }
-    .remaining strong { font-size: clamp(42px, 7vw, 82px); line-height: .9; }
-    .remaining span { color: rgba(255, 255, 255, 0.75); margin-bottom: 8px; }
-    .forecast { background: var(--panel); border: 1px solid var(--line); border-radius: 24px; padding: 24px; box-shadow: var(--shadow); display: grid; gap: 14px; }
-    .forecast h2, .section h2, .panel h2 { margin: 0; font-size: 20px; }
-    .forecast-text { font-size: 21px; font-weight: 800; line-height: 1.45; }
-    .risk { display: flex; justify-content: space-between; align-items: center; border-radius: 16px; padding: 14px; background: #f8fafc; }
-    .risk strong { font-size: 24px; }
-    .risk-low strong { color: var(--green); }
-    .risk-mid strong { color: var(--amber); }
-    .risk-high strong { color: var(--red); }
-    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 18px 0; }
-    .metric { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 18px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05); }
-    .metric span, label, .muted { color: var(--muted); font-size: 13px; }
-    .metric strong { display: block; margin: 8px 0 4px; font-size: 24px; }
-    .metric small { color: var(--muted); }
-    .good strong { color: var(--green); }
-    .bad strong { color: var(--red); }
-    .layout { display: grid; grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1.2fr); gap: 18px; }
+    .shell { max-width: 1200px; margin: 0 auto; padding: 28px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+    .logo { display: flex; align-items: center; gap: 10px; color: var(--navy); font-size: 22px; font-weight: 800; }
+    .logo-mark { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 13px; background: var(--navy); color: white; box-shadow: var(--soft-shadow); }
+    .topbar .tagline { color: var(--muted); font-size: 14px; }
+    .hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr); gap: 18px; align-items: stretch; }
+    .hero-main {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(145deg, var(--navy) 0%, #123142 64%, #0f766e 100%);
+      color: white;
+      border-radius: 32px;
+      padding: clamp(26px, 5vw, 46px);
+      box-shadow: var(--shadow);
+      min-height: 360px;
+    }
+    .hero-main::after {
+      content: "";
+      position: absolute;
+      inset: auto -80px -120px auto;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.24);
+      filter: blur(2px);
+    }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); padding: 8px 12px; color: rgba(255,255,255,.82); font-size: 13px; font-weight: 700; }
+    h1 { margin: 22px 0 12px; max-width: 720px; font-size: clamp(34px, 5vw, 64px); line-height: 1.04; letter-spacing: 0; }
+    .hero-main p { color: rgba(255, 255, 255, 0.78); font-size: 16px; line-height: 1.8; max-width: 640px; }
+    .hero-amount { margin-top: 30px; position: relative; z-index: 1; }
+    .hero-amount span { display: block; color: rgba(255, 255, 255, 0.72); font-size: 14px; font-weight: 700; }
+    .hero-amount strong { display: block; margin-top: 8px; font-size: clamp(54px, 9vw, 104px); line-height: .9; letter-spacing: 0; }
+    .today-budget { display: inline-flex; margin-top: 18px; border-radius: 18px; padding: 12px 16px; background: rgba(255,255,255,.12); color: white; font-weight: 800; }
+    .focus-card {
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.78);
+      border-radius: 32px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      display: grid;
+      align-content: space-between;
+      gap: 18px;
+    }
+    .focus-card h2, .section h2, .panel h2 { margin: 0; color: var(--navy); font-size: 20px; letter-spacing: 0; }
+    .forecast-text { font-size: 22px; font-weight: 850; line-height: 1.55; color: var(--navy); }
+    .risk { display: flex; justify-content: space-between; align-items: center; border-radius: 20px; padding: 16px; background: var(--panel-soft); }
+    .risk strong { font-size: 28px; }
+    .risk-low strong { color: var(--emerald-dark); }
+    .risk-mid strong { color: var(--warning); }
+    .risk-high strong { color: var(--danger); }
+    .muted { color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .quick {
+      margin: 18px 0;
+      background: var(--panel);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 30px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+    .quick-head { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 16px; }
+    .quick h2 { font-size: clamp(24px, 3vw, 34px); }
+    .quick p { color: var(--muted); margin: 8px 0 0; line-height: 1.7; }
+    .quick-form { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 12px; align-items: center; }
+    .quick input { margin: 0; border-radius: 22px; padding: 21px 22px; font-size: 22px; border: 1px solid var(--line); background: var(--panel-soft); }
+    .examples { display: flex; flex-wrap: wrap; gap: 8px; }
+    .example { border-radius: 999px; background: var(--emerald-soft); color: #047857; padding: 7px 11px; font-size: 13px; font-weight: 700; }
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 14px; margin: 18px 0; }
+    .metric {
+      display: flex;
+      gap: 13px;
+      align-items: flex-start;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 22px;
+      padding: 16px;
+      box-shadow: 0 8px 26px rgba(15, 23, 42, 0.045);
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .metric:hover, .panel:hover, .section:hover { transform: translateY(-2px); box-shadow: var(--soft-shadow); }
+    .metric-icon { flex: 0 0 34px; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 13px; background: var(--panel-soft); }
+    .metric span, label { color: var(--muted); font-size: 13px; font-weight: 700; }
+    .metric strong { display: block; margin: 7px 0 3px; color: var(--navy); font-size: 20px; letter-spacing: 0; }
+    .metric small { color: var(--muted); line-height: 1.5; }
+    .good strong { color: var(--emerald-dark); }
+    .bad strong { color: var(--danger); }
+    .layout { display: grid; grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.15fr); gap: 18px; align-items: start; }
     .stack { display: grid; gap: 18px; }
-    .panel, .section { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 20px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05); }
-    .quick { background: #102a2f; color: white; border: 0; }
-    .quick h2, .quick label { color: white; }
-    .quick p { color: rgba(255, 255, 255, 0.7); margin-top: 6px; }
+    .panel, .section {
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      border-radius: 26px;
+      padding: 22px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.045);
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
     form { margin: 0; }
-    input, select { width: 100%; border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px; margin: 7px 0 12px; background: white; color: var(--ink); }
-    .quick input { border: 0; padding: 17px 16px; font-size: 19px; }
-    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-    .btn { width: 100%; border: 0; border-radius: 14px; padding: 14px 16px; background: var(--green); color: white; font-weight: 800; cursor: pointer; }
-    .btn:hover { background: var(--green-dark); }
-    .ghost { border: 1px solid var(--line); background: white; color: var(--ink); border-radius: 12px; padding: 8px 10px; cursor: pointer; }
-    .danger { color: var(--red); }
+    input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 15px 16px;
+      margin: 8px 0 14px;
+      background: #ffffff;
+      color: var(--ink);
+      outline: none;
+      transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+    input:focus, select:focus { border-color: var(--emerald); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.13); background: white; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .btn {
+      width: 100%;
+      border: 0;
+      border-radius: 16px;
+      padding: 16px 18px;
+      background: var(--emerald);
+      color: white;
+      font-weight: 850;
+      cursor: pointer;
+      box-shadow: 0 14px 30px rgba(16, 185, 129, 0.24);
+      transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+    .btn:hover { transform: translateY(-1px); background: var(--emerald-dark); box-shadow: 0 18px 34px rgba(16, 185, 129, 0.28); }
+    .ghost { border: 1px solid var(--line); background: white; color: var(--ink); border-radius: 12px; padding: 8px 10px; cursor: pointer; transition: background .16s ease, transform .16s ease; }
+    .ghost:hover { transform: translateY(-1px); background: #f9fafb; }
+    .danger { color: var(--danger); }
     .inline-form { display: inline; }
-    .message { margin-bottom: 14px; border-radius: 14px; padding: 12px 14px; background: #ecfdf3; color: #067647; font-weight: 700; }
+    .message { margin-bottom: 14px; border-radius: 16px; padding: 13px 15px; background: var(--emerald-soft); color: #047857; font-weight: 800; animation: rise .24s ease both; }
     .advice { display: grid; gap: 10px; }
-    .advice div { background: var(--soft-green); border-radius: 14px; padding: 12px 14px; color: #134e4a; }
+    .advice div { background: var(--emerald-soft); border-radius: 16px; padding: 13px 14px; color: #065f46; line-height: 1.7; }
     .bars { display: grid; gap: 12px; }
     .bar-row { display: grid; gap: 7px; }
-    .bar-top { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+    .bar-top { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--navy); }
     .track { height: 12px; border-radius: 999px; background: #edf2f7; overflow: hidden; }
-    .fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #0f766e, #38bdf8); }
+    .fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--emerald), #34d399); transition: width .35s ease; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th, td { padding: 12px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
     th { color: var(--muted); font-weight: 700; }
     .amount { font-weight: 800; white-space: nowrap; }
-    .positive { color: var(--green); }
-    .pill { display: inline-flex; border-radius: 999px; background: #eef6f4; color: #115e59; padding: 5px 9px; font-size: 12px; font-weight: 700; }
+    .positive { color: var(--emerald-dark); }
+    .pill { display: inline-flex; border-radius: 999px; background: var(--emerald-soft); color: #047857; padding: 5px 9px; font-size: 12px; font-weight: 800; }
     .empty { color: var(--muted); text-align: center; padding: 24px; }
     .table-wrap { overflow-x: auto; }
     footer { color: var(--muted); text-align: center; padding: 26px 0 6px; }
+    @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     @media (max-width: 920px) {
       .hero, .layout { grid-template-columns: 1fr; }
       .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .quick-form { grid-template-columns: 1fr; }
     }
     @media (max-width: 560px) {
-      .shell { padding: 14px; }
-      .hero-main, .forecast, .panel, .section { border-radius: 18px; padding: 17px; }
+      .shell { padding: 16px; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .hero-main, .focus-card, .quick, .panel, .section { border-radius: 22px; padding: 18px; }
+      .hero-main { min-height: 330px; }
       .metrics { grid-template-columns: 1fr; }
       .grid-2 { grid-template-columns: 1fr; }
+      .quick-head { display: block; }
+      .quick input { font-size: 18px; padding: 18px; }
       th, td { padding: 10px 6px; }
     }
   </style>
 </head>
 <body>
   <div class="shell">
+    <header class="topbar">
+      <div class="logo"><span class="logo-mark">💰</span><span>Money Pace</span></div>
+      <div class="tagline">入力は短く。お金の流れは、ひと目で。</div>
+    </header>
+
     <div class="hero">
       <section class="hero-main">
-        <div class="brand">
-          <strong>Money Pace</strong>
-          <span class="badge">学生・若手社会人向け</span>
-        </div>
-        <h1>今月あといくら使えるか、すぐ分かる。</h1>
-        <p>爆速入力で支出を残し、カテゴリの偏りと月末の赤字リスクをひと目で確認できます。</p>
-        <div class="remaining">
+        <span class="eyebrow">🎯 学生・若手社会人のための支出管理</span>
+        <h1>今月あといくら使えるかが、ひと目で分かる。</h1>
+        <p>支出は1行で記録。残額、今日使える目安、月末の見通しをすぐ確認できます。</p>
+        <div class="hero-amount">
+          <span>あと使える金額</span>
           <strong>${yen(data.remaining)}</strong>
-          <span>今月の残額</span>
+          <div class="today-budget">今日はあと ${yen(data.dailyRemaining)} 使えます</div>
         </div>
       </section>
-      <aside class="forecast ${riskClass}">
+      <aside class="focus-card ${riskClass}">
         <h2>月末予測</h2>
         <div class="forecast-text">${prediction}</div>
         <div class="risk"><span>赤字リスク</span><strong>${data.risk}</strong></div>
-        <div class="muted">残り${data.daysLeft}日 / 1日あたり ${yen(data.dailyRemaining)}</div>
+        <div class="muted">残り${data.daysLeft}日。今日使える目安は ${yen(data.dailyRemaining)} です。</div>
       </aside>
     </div>
 
+    <section class="quick">
+      <div class="quick-head">
+        <div>
+          <h2>爆速入力</h2>
+          <p>メモと金額だけで登録できます。カテゴリは自動で推定します。</p>
+        </div>
+        <div class="examples">
+          <span class="example">ラーメン 950</span>
+          <span class="example">Netflix 1490</span>
+          <span class="example">電車 420</span>
+        </div>
+      </div>
+      <form method="post" action="/quick-expense" class="quick-form">
+        <input name="quickText" placeholder="例: ラーメン 950" autocomplete="off" required>
+        <button class="btn" type="submit">記録する</button>
+      </form>
+    </section>
+
     <section class="metrics">
-      ${card("今月の予算", yen(monthlyBudget), "いつでも変更できます")}
-      ${card("今月の収入合計", yen(data.incomeTotal), `${data.monthlyIncomes.length}件`, "good")}
-      ${card("今月の支出合計", yen(data.expenseTotal), `${data.monthlyExpenses.length}件`)}
-      ${card("固定費合計", yen(data.fixedTotal), `${fixedCosts.length}件`)}
-      ${card("今月の残額", yen(data.remaining), "予算 + 収入 - 支出 - 固定費", data.remaining < 0 ? "bad" : "good")}
-      ${card("1日あたり使える金額", yen(data.dailyRemaining), "今日を含めて計算", data.dailyRemaining < 0 ? "bad" : "good")}
-      ${card("月末予測", yen(data.projectedBalance), data.projectedBalance >= 0 ? "余り見込み" : "赤字見込み", data.projectedBalance < 0 ? "bad" : "good")}
-      ${card("使いすぎカテゴリ", yen(data.topCategory.amount), data.topCategory.category)}
+      ${card("今月の予算", yen(monthlyBudget), "あとから変更できます", "", "🎯")}
+      ${card("収入", yen(data.incomeTotal), `${data.monthlyIncomes.length}件`, "good", "💰")}
+      ${card("支出", yen(data.expenseTotal), `${data.monthlyExpenses.length}件`, "", "🍔")}
+      ${card("固定費", yen(data.fixedTotal), `${fixedCosts.length}件`, "", "🏠")}
+      ${card("支出が多いカテゴリ", yen(data.topCategory.amount), data.topCategory.category, "", "📊")}
+      ${card("月末の見込み", yen(data.projectedBalance), data.projectedBalance >= 0 ? "残る見込み" : "赤字見込み", data.projectedBalance < 0 ? "bad" : "good", "📈")}
     </section>
 
     ${message ? `<div class="message">${escapeHtml(message)}</div>` : ""}
 
     <div class="layout">
       <div class="stack">
-        <section class="panel quick">
-          <h2>爆速支出入力</h2>
-          <p>例: ラーメン 950 / 電車 420 / Netflix 1490</p>
-          <form method="post" action="/quick-expense">
-            <label>LINE風に1行で入力</label>
-            <input name="quickText" placeholder="ラーメン 950" autocomplete="off" required>
-            <button class="btn" type="submit">一瞬で登録</button>
-          </form>
-        </section>
-
         <section class="panel">
           <h2>予算設定</h2>
           <form method="post" action="/budget">
             <label>今月の予算</label>
             <input name="budget" type="number" min="1" value="${monthlyBudget}" required>
-            <button class="btn" type="submit">予算を更新</button>
+            <button class="btn" type="submit">予算を保存</button>
           </form>
         </section>
 
         <section class="panel">
-          <h2>ワンポイントアドバイス</h2>
+          <h2>今月のアドバイス</h2>
           <div class="advice">${advice(data).map((item) => `<div>${escapeHtml(item)}</div>`).join("")}</div>
         </section>
 
         <section class="panel">
-          <h2>カテゴリ別分析</h2>
+          <h2>カテゴリ別の支出</h2>
           <div class="bars">
             ${data.byCategory
               .map(
@@ -434,13 +549,13 @@ function renderPage(message = "") {
 
       <div class="stack">
         <section class="section">
-          <h2>支出登録</h2>
+          <h2>支出を追加</h2>
           <form method="post" action="/expenses">
             <div class="grid-2">
-              <div><label>金額</label><input name="amount" type="number" min="1" placeholder="1200" required></div>
+              <div><label>金額</label><input name="amount" type="number" min="1" placeholder="例: 1200" required></div>
               <div><label>カテゴリ</label><select name="category">${optionTags(expenseCategories)}</select></div>
             </div>
-            <label>メモ</label><input name="memo" placeholder="昼食、教材、飲み会など">
+            <label>メモ</label><input name="memo" placeholder="例: 昼食、教材、飲み会">
             <div class="grid-2">
               <div><label>日付</label><input name="date" type="date" value="${today()}" required></div>
               <div><label>支払い方法</label><select name="paymentMethod">${optionTags(paymentMethods)}</select></div>
@@ -450,24 +565,24 @@ function renderPage(message = "") {
         </section>
 
         <section class="section">
-          <h2>収入登録</h2>
+          <h2>収入を追加</h2>
           <form method="post" action="/incomes">
             <div class="grid-2">
-              <div><label>金額</label><input name="amount" type="number" min="1" placeholder="50000" required></div>
+              <div><label>金額</label><input name="amount" type="number" min="1" placeholder="例: 50000" required></div>
               <div><label>収入源</label><select name="source">${optionTags(incomeSources)}</select></div>
             </div>
-            <label>メモ</label><input name="memo" placeholder="6月分、単発案件など">
+            <label>メモ</label><input name="memo" placeholder="例: 6月分、単発案件">
             <label>日付</label><input name="date" type="date" value="${today()}" required>
             <button class="btn" type="submit">収入を登録</button>
           </form>
         </section>
 
         <section class="section">
-          <h2>固定費管理</h2>
+          <h2>固定費を管理</h2>
           <form method="post" action="/fixed-costs">
             <div class="grid-2">
-              <div><label>名前</label><input name="name" placeholder="スマホ代" required></div>
-              <div><label>金額</label><input name="amount" type="number" min="1" placeholder="3000" required></div>
+              <div><label>名前</label><input name="name" placeholder="例: スマホ代" required></div>
+              <div><label>金額</label><input name="amount" type="number" min="1" placeholder="例: 3000" required></div>
             </div>
             <div class="grid-2">
               <div><label>カテゴリ</label><select name="category">${optionTags(expenseCategories, "サブスク")}</select></div>
@@ -494,7 +609,7 @@ function renderPage(message = "") {
       <div class="table-wrap"><table><tr><th>名前</th><th>金額</th><th>カテゴリ</th><th>支払日</th><th></th></tr>${renderHistoryRows(fixedCosts, "fixed")}</table></div>
     </section>
 
-    <footer>Money Pace runs on Express + Render. Data is stored in memory for this demo.</footer>
+    <footer>Money Pace はデモ用アプリです。入力したデータはサーバー再起動時にリセットされます。</footer>
   </div>
 </body>
 </html>`;
@@ -507,11 +622,11 @@ app.get("/", (req, res) => {
 app.post("/quick-expense", (req, res) => {
   const parsed = parseQuickExpense(req.body.quickText);
   if (!parsed) {
-    res.redirect("/?message=" + encodeURIComponent("入力形式は「メモ 金額」で入れてください"));
+    res.redirect("/?message=" + encodeURIComponent("「ラーメン 950」のように、メモと金額を入力してください"));
     return;
   }
   addExpense(parsed);
-  res.redirect("/?message=" + encodeURIComponent(`${parsed.memo} を ${parsed.category} として登録しました`));
+  res.redirect("/?message=" + encodeURIComponent(`${parsed.memo}を「${parsed.category}」として記録しました`));
 });
 
 app.post("/expenses", (req, res) => {
