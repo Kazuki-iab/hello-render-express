@@ -59,6 +59,13 @@ function statCard(label, value, note, iconName, tone = "") {
   </article>`;
 }
 
+function statusChip(label, value, tone = "") {
+  return `<div class="status-chip ${tone}">
+    <span>${label}</span>
+    <strong>${value}</strong>
+  </div>`;
+}
+
 function renderRecentExpenses(expenses) {
   const recent = expenses.slice().reverse().slice(0, 5);
   if (recent.length === 0) {
@@ -168,6 +175,8 @@ function renderCategoryBars(data) {
 function renderPage(message = "") {
   const data = store.calculateDashboard();
   const hasExpense = data.expenses.length > 0;
+  const budgetMeter = Math.min(data.budgetUsed, 100);
+  const riskTone = data.risk === "高" ? "danger" : data.risk === "中" ? "warn" : "good";
   const prediction =
     !hasExpense
       ? "最初の支出を追加すると、月末の見込みを表示します。"
@@ -179,10 +188,11 @@ function renderPage(message = "") {
     ? `今日使える目安は ${store.yen(data.dailyRemaining)} です。`
     : "最初の支出を追加すると、今月の残額と月末の見込みを表示します。";
 
-  const content = `<div class="app-shell">
+  const content = `<div class="ambient-bg" aria-hidden="true"><span></span><span></span></div>
+  <div class="app-shell">
     <header class="topbar">
       <a class="brand" href="/"><span>${logoMark()}</span><strong>Money Pace</strong></a>
-      <div class="topbar-note">今月のペースを、すぐ確認。</div>
+      <div class="topbar-note"><span></span>今月のペースを、すぐ確認。</div>
     </header>
 
     ${message ? `<div class="message">${escapeHtml(message)}</div>` : ""}
@@ -193,8 +203,22 @@ function renderPage(message = "") {
           <span class="eyebrow">今月あと使える金額</span>
           <h1 class="${hasExpense ? "" : "empty-title"}">${heroAmount}</h1>
           <p>${heroNote}</p>
+          <div class="hero-status">
+            ${statusChip("予算消化", `${data.budgetUsed}%`)}
+            ${statusChip("残り日数", `${data.daysLeft}日`)}
+            ${statusChip("赤字リスク", hasExpense ? data.risk : "-", riskTone)}
+          </div>
         </div>
         <div class="hero-side">
+          <div class="pace-meter" style="--meter:${budgetMeter};">
+            <div class="meter-ring">
+              <span>${data.budgetUsed}%</span>
+            </div>
+            <div>
+              <span>Budget pace</span>
+              <strong>${hasExpense ? "今月の使い方は安定しています" : "支出追加後にペースを表示"}</strong>
+            </div>
+          </div>
           <div class="forecast-pill">
             <span>月末の見込み</span>
             <strong>${prediction}</strong>
@@ -220,10 +244,10 @@ function renderPage(message = "") {
               <p>メモと金額だけで支出を追加できます。</p>
             </div>
             <div class="examples">
-              <span>ラーメン 950</span>
-              <span>電車 420</span>
-              <span>Netflix 1490</span>
-              <span>カフェ 650</span>
+              <button type="button" data-example="ラーメン 950">ラーメン 950</button>
+              <button type="button" data-example="電車 420">電車 420</button>
+              <button type="button" data-example="Netflix 1490">Netflix 1490</button>
+              <button type="button" data-example="カフェ 650">カフェ 650</button>
             </div>
           </div>
           <form method="post" action="/quick-expense" class="quick-form">

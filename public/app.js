@@ -18,6 +18,16 @@ document.querySelectorAll("[data-open]").forEach((trigger) => {
   });
 });
 
+document.querySelectorAll("[data-example]").forEach((example) => {
+  example.addEventListener("click", () => {
+    const input = document.getElementById("quickText");
+    if (!input) return;
+    input.value = example.dataset.example;
+    input.focus();
+    input.select();
+  });
+});
+
 document.querySelectorAll("form").forEach((form) => {
   form.addEventListener("submit", () => {
     const button = form.querySelector(".btn");
