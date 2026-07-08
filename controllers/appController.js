@@ -27,6 +27,31 @@ function deleteButton(action) {
   return `<form method="post" action="${action}" class="inline-form"><button class="ghost danger" type="submit">削除</button></form>`;
 }
 
+function categoryMark(category) {
+  const marks = {
+    食費: "食",
+    交通費: "交",
+    交際費: "遊",
+    服: "服",
+    美容: "美",
+    サブスク: "Sub",
+    学費: "学",
+    "研究室・仕事関連": "Work",
+    その他: "•",
+  };
+  return marks[category] || marks["その他"];
+}
+
+function relativeDate(dateText) {
+  const target = new Date(dateText);
+  const now = new Date(store.today());
+  const diff = Math.round((now - target) / 86400000);
+  if (diff === 0) return "今日";
+  if (diff === 1) return "昨日";
+  if (diff === 2) return "2日前";
+  return dateText;
+}
+
 function icon(name) {
   const icons = {
     wallet: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H19v14H6.5A2.5 2.5 0 0 1 4 16.5z"></path><path d="M4 8h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-4.5a2.5 2.5 0 0 1 0-5H22"></path><path d="M16 12h.01"></path></svg>`,
@@ -59,31 +84,33 @@ function statCard(label, value, note, iconName, tone = "") {
   </article>`;
 }
 
-function statusChip(label, value, tone = "") {
-  return `<div class="status-chip ${tone}">
+function pulseMetric(label, value, note = "") {
+  return `<div class="pulse-metric">
     <span>${label}</span>
     <strong>${value}</strong>
+    ${note ? `<small>${note}</small>` : ""}
   </div>`;
 }
 
 function renderRecentExpenses(expenses) {
   const recent = expenses.slice().reverse().slice(0, 5);
   if (recent.length === 0) {
-    return `<div class="empty-card">
+    return `<div class="timeline-empty">
       <strong>最初の支出を追加しましょう</strong>
-      <p>追加すると、最近の支出と今月の残額がここに表示されます。</p>
+      <p>入力すると、ここに最近の支出がタイムラインで並びます。</p>
     </div>`;
   }
 
-  return `<div class="recent-list">${recent
+  return `<div class="expense-timeline">${recent
     .map(
-      (item) => `<div class="recent-item">
+      (item) => `<article class="timeline-item">
+        <div class="timeline-mark">${categoryMark(item.category)}</div>
         <div>
           <strong>${escapeHtml(item.memo || item.category)}</strong>
-          <span>${escapeHtml(item.category)} ・ ${escapeHtml(item.date)}</span>
+          <span>${relativeDate(item.date)} ・ ${escapeHtml(item.category)}</span>
         </div>
         <b>${store.yen(item.amount)}</b>
-      </div>`
+      </article>`
     )
     .join("")}</div>`;
 }
@@ -119,6 +146,18 @@ function renderTrend(monthlyExpenses) {
     <polyline class="trend-grid" points="0,74 100,74"></polyline>
     <polyline class="trend-line" points="${points}"></polyline>
   </svg>`;
+}
+
+function renderMonthGauge(data) {
+  const percent = Math.min(data.budgetUsed, 100);
+  return `<div class="month-gauge" style="--meter:${percent};">
+    <div class="month-ring"><span>${data.budgetUsed}%</span></div>
+    <div>
+      <span>今月</span>
+      <strong>${store.yen(data.expenseTotal + data.fixedTotal)}</strong>
+      <p>${store.yen(data.monthlyBudget)} のうち</p>
+    </div>
+  </div>`;
 }
 
 function renderRows(items, type) {
@@ -175,8 +214,6 @@ function renderCategoryBars(data) {
 function renderPage(message = "") {
   const data = store.calculateDashboard();
   const hasExpense = data.expenses.length > 0;
-  const budgetMeter = Math.min(data.budgetUsed, 100);
-  const riskTone = data.risk === "高" ? "danger" : data.risk === "中" ? "warn" : "good";
   const prediction =
     !hasExpense
       ? "最初の支出を追加すると、月末の見込みを表示します。"
@@ -192,101 +229,92 @@ function renderPage(message = "") {
   <div class="app-shell">
     <header class="topbar">
       <a class="brand" href="/"><span>${logoMark()}</span><strong>Money Pace</strong></a>
-      <div class="topbar-note"><span></span>今月のペースを、すぐ確認。</div>
+      <nav class="topnav" aria-label="ページ内ナビ">
+        <a href="#home">ホーム</a>
+        <a href="#insight">今月</a>
+        <a href="#manage">管理</a>
+      </nav>
     </header>
 
     ${message ? `<div class="message">${escapeHtml(message)}</div>` : ""}
 
-    <main class="dashboard">
-      <section class="hero-card">
-        <div class="hero-copy">
-          <span class="eyebrow">今月あと使える金額</span>
+    <main>
+      <section class="home-stage" id="home">
+        <div class="money-hero">
+          <div class="hero-label">あと使える金額</div>
           <h1 class="${hasExpense ? "" : "empty-title"}">${heroAmount}</h1>
           <p>${heroNote}</p>
-          <div class="hero-status">
-            ${statusChip("予算消化", `${data.budgetUsed}%`)}
-            ${statusChip("残り日数", `${data.daysLeft}日`)}
-            ${statusChip("赤字リスク", hasExpense ? data.risk : "-", riskTone)}
-          </div>
+          <a class="hero-cta" href="#quickText" data-focus-quick>${icon("plus")} 支出を追加</a>
         </div>
-        <div class="hero-side">
-          <div class="pace-meter" style="--meter:${budgetMeter};">
-            <div class="meter-ring">
-              <span>${data.budgetUsed}%</span>
-            </div>
-            <div>
-              <span>Budget pace</span>
-              <strong>${hasExpense ? "今月の使い方は安定しています" : "支出追加後にペースを表示"}</strong>
-            </div>
-          </div>
-          <div class="forecast-pill">
-            <span>月末の見込み</span>
-            <strong>${prediction}</strong>
-          </div>
-          <a class="btn primary-link" href="#expense-panel" data-open="expense-panel">${icon("plus")} 支出を追加</a>
-        </div>
-      </section>
 
-      <section class="stat-grid">
-        ${statCard("今日使える目安", hasExpense ? store.yen(data.dailyRemaining) : "-", `${data.daysLeft}日分で計算`, "wallet", "accent")}
-        ${statCard("月末予測", hasExpense ? store.yen(data.projectedBalance) : "-", data.risk === "高" ? "赤字リスク高" : "予算内の見込み", "trend")}
-        ${statCard("今月の予算消化率", `${data.budgetUsed}%`, `${store.yen(data.monthlyBudget)} のうち`, "target")}
-        ${statCard("収入合計", store.yen(data.incomeTotal), `${data.monthlyIncomes.length}件`, "wallet", "positive")}
-        ${statCard("支出合計", store.yen(data.expenseTotal), `${data.monthlyExpenses.length}件`, "receipt")}
-        ${statCard("固定費合計", store.yen(data.fixedTotal), `${data.fixedCosts.length}件`, "home")}
-      </section>
-
-      <section class="dashboard-grid">
-        <article class="panel quick-panel" id="expense-panel">
-          <div class="panel-head">
-            <div>
-              <h2>クイック入力</h2>
-              <p>メモと金額だけで支出を追加できます。</p>
-            </div>
-            <div class="examples">
-              <button type="button" data-example="ラーメン 950">ラーメン 950</button>
-              <button type="button" data-example="電車 420">電車 420</button>
-              <button type="button" data-example="Netflix 1490">Netflix 1490</button>
-              <button type="button" data-example="カフェ 650">カフェ 650</button>
-            </div>
+        <section class="quick-console" aria-label="クイック入力">
+          <div class="quick-top">
+            <span>Quick Add</span>
+            <strong>クイック入力</strong>
           </div>
           <form method="post" action="/quick-expense" class="quick-form">
             <label class="sr-only" for="quickText">支出を1行で入力</label>
             <input id="quickText" name="quickText" placeholder="ラーメン 950" autocomplete="off" required>
             <button class="btn" type="submit">追加</button>
           </form>
+          <div class="quick-chips" aria-label="入力例">
+            <button type="button" data-example="ラーメン 950">ラーメン 950</button>
+            <button type="button" data-example="電車 420">電車 420</button>
+            <button type="button" data-example="Netflix 1490">Netflix 1490</button>
+            <button type="button" data-example="カフェ 650">カフェ 650</button>
+          </div>
+        </section>
+
+        <aside class="today-card">
+          <span>今日の目安</span>
+          <strong>${hasExpense ? store.yen(data.dailyRemaining) : "-"}</strong>
+          <p>${hasExpense ? "この金額を目安に使うと、月末まで余裕を残せます。" : "支出を追加すると、今日使える目安が出ます。"}</p>
+        </aside>
+      </section>
+
+      <section class="product-strip" id="insight">
+        ${pulseMetric("今日", hasExpense ? store.yen(data.dailyRemaining) : "-", `${data.daysLeft}日分で計算`)}
+        ${pulseMetric("今月", `${data.budgetUsed}%`, "予算消化率")}
+        ${pulseMetric("月末", hasExpense ? store.yen(data.projectedBalance) : "-", data.risk === "高" ? "赤字リスク高" : "予算内の見込み")}
+      </section>
+
+      <section class="insight-layout">
+        <article class="statement-card">
+          <span>Month forecast</span>
+          <strong>${prediction}</strong>
+          <p>${hasExpense ? "日々の入力から、月末の着地点を自動で見える化します。" : "まずはクイック入力で1件追加してみましょう。"}</p>
         </article>
 
-        <article class="panel recent-panel">
-          <div class="panel-head compact">
-            <h2>最近の支出</h2>
+        <article class="timeline-card">
+          <div class="section-heading">
+            <div>
+              <span>Timeline</span>
+              <h2>最近の支出</h2>
+            </div>
           </div>
           ${renderRecentExpenses(data.expenses)}
         </article>
 
-        <article class="panel trend-panel">
-          <div class="panel-head compact">
+        <article class="pulse-card">
+          <div class="section-heading">
             <div>
-              <h2>支出の推移</h2>
-              <p>今月の累計支出</p>
+              <span>Spending pulse</span>
+              <h2>支出の流れ</h2>
             </div>
-            <strong>${store.yen(data.expenseTotal)}</strong>
           </div>
           ${renderTrend(data.monthlyExpenses)}
         </article>
 
-        <article class="panel advice-panel">
-          <div class="panel-head compact">
-            <h2>今月のアドバイス</h2>
-          </div>
-          <div class="advice-list">${store.advice(data).map((item) => `<p>${escapeHtml(item)}</p>`).join("")}</div>
+        <article class="month-card">
+          ${renderMonthGauge(data)}
         </article>
       </section>
 
-      <section class="management">
-        <div class="section-title">
-          <h2>管理メニュー</h2>
-          <p>必要な時だけ開いて編集できます。</p>
+      <section class="manage-zone" id="manage">
+        <div class="manage-copy">
+          <span>Manage</span>
+          <h2>設定と分析は、必要な時だけ。</h2>
+          <p>ホームは確認と入力に集中。細かい編集はここから開けます。</p>
         </div>
         <div class="menu-grid">
           ${renderExpenseDetails(data)}

@@ -18,6 +18,16 @@ document.querySelectorAll("[data-open]").forEach((trigger) => {
   });
 });
 
+document.querySelectorAll("[data-focus-quick]").forEach((trigger) => {
+  trigger.addEventListener("click", (event) => {
+    const input = document.getElementById("quickText");
+    if (!input) return;
+    event.preventDefault();
+    input.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => input.focus(), 260);
+  });
+});
+
 document.querySelectorAll("[data-example]").forEach((example) => {
   example.addEventListener("click", () => {
     const input = document.getElementById("quickText");
@@ -25,6 +35,8 @@ document.querySelectorAll("[data-example]").forEach((example) => {
     input.value = example.dataset.example;
     input.focus();
     input.select();
+    input.closest(".quick-console")?.classList.add("is-primed");
+    window.setTimeout(() => input.closest(".quick-console")?.classList.remove("is-primed"), 420);
   });
 });
 
