@@ -4,7 +4,8 @@
   "description": "Minimal Express app for Render deployment",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test"
   },
   "dependencies": {
     "express": "^5.1.0"

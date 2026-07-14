@@ -23,8 +23,8 @@ function progressPercent(value, max) {
   return Math.min(Math.round((value / max) * 100), 100);
 }
 
-function deleteButton(action) {
-  return `<form method="post" action="${action}" class="inline-form"><button class="ghost danger" type="submit">削除</button></form>`;
+function deleteButton(action, returnPanel) {
+  return `<form method="post" action="${action}" class="inline-form"><input type="hidden" name="returnView" value="manage"><input type="hidden" name="returnPanel" value="${returnPanel}"><button class="ghost danger" type="submit">削除</button></form>`;
 }
 
 function categoryMark(category) {
@@ -61,6 +61,9 @@ function icon(name) {
     trend: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16l5-5 4 4 7-8"></path><path d="M15 7h5v5"></path></svg>`,
     target: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path></svg>`,
     plus: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>`,
+    settings: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.38.27.7.62.9 1 .15.32.22.66.2 1h.09v4h-.09a1.7 1.7 0 0 0-1.1.4z"></path></svg>`,
+    arrow: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>`,
+    back: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"></path></svg>`,
   };
   return icons[name] || icons.wallet;
 }
@@ -160,7 +163,7 @@ function renderRows(items, type) {
           <td><span class="pill">${escapeHtml(item.category)}</span></td>
           <td>${escapeHtml(item.memo)}</td>
           <td>${escapeHtml(item.paymentMethod)}</td>
-          <td>${deleteButton(`/expenses/${item.id}/delete`)}</td>
+          <td>${deleteButton(`/expenses/${item.id}/delete`, "expense")}</td>
         </tr>`;
       }
       if (type === "income") {
@@ -169,7 +172,7 @@ function renderRows(items, type) {
           <td class="amount positive">${store.yen(item.amount)}</td>
           <td>${escapeHtml(item.source)}</td>
           <td>${escapeHtml(item.memo)}</td>
-          <td>${deleteButton(`/incomes/${item.id}/delete`)}</td>
+          <td>${deleteButton(`/incomes/${item.id}/delete`, "income")}</td>
         </tr>`;
       }
       return `<tr>
@@ -177,7 +180,7 @@ function renderRows(items, type) {
         <td class="amount">${store.yen(item.amount)}</td>
         <td><span class="pill">${escapeHtml(item.category)}</span></td>
         <td>${escapeHtml(item.payDay)}日</td>
-        <td>${deleteButton(`/fixed-costs/${item.id}/delete`)}</td>
+        <td>${deleteButton(`/fixed-costs/${item.id}/delete`, "fixed")}</td>
       </tr>`;
     })
     .join("");
@@ -194,6 +197,14 @@ function renderCategoryBars(data) {
     .join("");
 }
 
+function manageNavButton(target, iconName, label, meta, current = false) {
+  return `<button class="manage-nav-button ${current ? "is-current" : ""}" type="button" data-manage-target="${target}"${current ? ' aria-current="page"' : ""}>
+    <span class="manage-nav-icon">${icon(iconName)}</span>
+    <span><strong>${label}</strong><small>${meta}</small></span>
+    ${icon("arrow")}
+  </button>`;
+}
+
 function renderPage(message = "", messageType = "status") {
   const data = store.calculateDashboard();
   const hasExpense = data.monthlyExpenses.length > 0;
@@ -207,112 +218,131 @@ function renderPage(message = "", messageType = "status") {
   const amountLength = String(Math.abs(Math.round(data.remaining))).length;
   const amountClass = amountLength >= 9 ? "is-compact" : amountLength >= 7 ? "is-long" : "";
   const heroNote = hasExpense
-    ? "予算と今月の支出から計算しています。"
+    ? "予算・収入・支出・固定費をもとに計算しています。"
     : "最初の支出を追加すると、今月の残額と月末の見込みを表示します。";
 
   const content = `<div class="app-shell">
     <header class="topbar">
-      <a class="brand" href="/"><span>${logoMark()}</span><strong>Money Pace</strong></a>
-      <nav class="topnav" aria-label="ページ内ナビ">
-        <a href="#home">ホーム</a>
-        <a href="#insight">今月</a>
-        <a href="#manage">管理</a>
-      </nav>
+      <button class="brand" type="button" data-route="home" aria-label="Money Pace ホーム">
+        <span>${logoMark()}</span><strong>Money Pace</strong>
+      </button>
+      <div class="desktop-actions">
+        <button class="nav-action is-current" type="button" data-route="home" aria-current="page">ホーム</button>
+        <button class="nav-action manage-action" type="button" data-route="manage">${icon("settings")} 管理 ${icon("arrow")}</button>
+      </div>
     </header>
 
-    <main>
-      <section class="balance-surface" id="home">
-        <div class="balance-primary">
-          <div class="balance-topline">
-            <span class="balance-period">今月</span>
-            <span class="balance-days">残り${data.daysLeft}日</span>
-          </div>
-          <p class="balance-label">今月あと使える金額</p>
-          <h1 class="${hasExpense ? amountClass : "empty-title"}">${heroAmount}</h1>
-          <p class="balance-note">${heroNote}</p>
-          <div class="balance-context">
-            <div>
-              <span>今日使える目安</span>
-              <strong>${hasExpense ? store.yen(data.dailyRemaining) : "-"}</strong>
-            </div>
-            <p>${prediction}</p>
-          </div>
-        </div>
+    ${message ? `<div class="message toast ${messageType === "error" ? "is-error" : ""}" role="${messageType === "error" ? "alert" : "status"}" aria-live="${messageType === "error" ? "assertive" : "polite"}">${escapeHtml(message)}</div>` : ""}
 
-        <div class="quick-entry" aria-label="クイック入力">
-          <div class="quick-heading">
-            <div>
-              <span class="eyebrow">支出を追加</span>
-              <h2>クイック入力</h2>
+    <main class="view-shell">
+      <section class="app-view is-active" data-view="home" aria-labelledby="home-title">
+        <section class="balance-stage">
+          <div class="balance-primary">
+            <div class="balance-topline">
+              <span class="balance-period">今月</span>
+              <span class="balance-days">残り${data.daysLeft}日</span>
             </div>
-            <span class="quick-hint">メモと金額だけ</span>
+            <p class="balance-label">今月あと使える金額</p>
+            <h1 id="home-title" class="${hasExpense ? amountClass : "empty-title"}" tabindex="-1">${heroAmount}</h1>
+            <p class="balance-note">${heroNote}</p>
+            <div class="balance-context">
+              <div>
+                <span>今日使える目安</span>
+                <strong>${hasExpense ? store.yen(data.dailyRemaining) : "-"}</strong>
+              </div>
+              <p>${prediction}</p>
+            </div>
           </div>
-          <form method="post" action="/quick-expense" class="quick-form">
-            <label class="sr-only" for="quickText">支出を1行で入力</label>
-            <input id="quickText" name="quickText" placeholder="ラーメン 950" autocomplete="off" required>
-            <button class="btn quick-submit" type="submit">支出を追加</button>
-          </form>
-          <div class="quick-chips" aria-label="入力例">
-            <button type="button" data-example="ラーメン 950">ラーメン 950</button>
-            <button type="button" data-example="電車 420">電車 420</button>
-            <button type="button" data-example="Netflix 1490">Netflix 1490</button>
-            <button type="button" data-example="カフェ 650">カフェ 650</button>
+
+          <div class="quick-entry" aria-label="クイック入力">
+            <div class="quick-heading">
+              <div>
+                <span class="eyebrow">クイック入力</span>
+                <h2>支出をすぐ追加</h2>
+              </div>
+              <span class="quick-hint">メモと金額だけ</span>
+            </div>
+            <form method="post" action="/quick-expense" class="quick-form">
+              <label class="sr-only" for="quickText">支出を1行で入力</label>
+              <input id="quickText" name="quickText" placeholder="ラーメン 950" autocomplete="off" required>
+              <button class="btn quick-submit" type="submit">追加</button>
+            </form>
+            <div class="quick-chips" aria-label="入力例">
+              <button type="button" data-example="ラーメン 950">ラーメン <b>950</b></button>
+              <button type="button" data-example="電車 420">電車 <b>420</b></button>
+              <button type="button" data-example="Netflix 1490">Netflix <b>1490</b></button>
+              <button type="button" data-example="カフェ 650">カフェ <b>650</b></button>
+            </div>
+            <button class="form-link" type="button" data-go-manage="expense">項目を指定して追加 ${icon("arrow")}</button>
           </div>
-          ${message ? `<div class="message ${messageType === "error" ? "is-error" : ""}" role="${messageType === "error" ? "alert" : "status"}" aria-live="${messageType === "error" ? "assertive" : "polite"}">${escapeHtml(message)}</div>` : ""}
-          <button class="form-link" type="button" data-open="expense-panel">項目を指定して追加</button>
-        </div>
+        </section>
+
+        <section class="activity-layout">
+          <article class="activity-panel">
+            <div class="section-heading">
+              <div><span>最近の動き</span><h2>最近の支出</h2></div>
+              <button type="button" class="text-action" data-go-manage="expense">履歴を管理 ${icon("arrow")}</button>
+            </div>
+            ${renderRecentExpenses(data.expenses)}
+          </article>
+
+          <aside class="month-pulse">
+            <div class="month-pulse-head">
+              <div>
+                <span class="eyebrow">月末の見込み</span>
+                <h2>${hasExpense ? (data.projectedBalance >= 0 ? "予算内のペース" : "見直しが必要") : "支出を追加して確認"}</h2>
+              </div>
+              <span class="risk-label ${data.risk === "高" ? "is-alert" : ""}">${hasExpense ? `リスク ${data.risk}` : "未計算"}</span>
+            </div>
+            ${renderMonthGauge(data)}
+            <div class="metric-list">
+              <div><span>支出</span><strong>${store.yen(data.expenseTotal)}</strong></div>
+              <div><span>収入</span><strong>${store.yen(data.incomeTotal)}</strong></div>
+              <div><span>固定費</span><strong>${store.yen(data.fixedTotal)}</strong></div>
+            </div>
+            <div class="trend-wrap">
+              <div class="trend-label"><span>支出の推移</span><small>${data.daysLeft}日残り</small></div>
+              ${renderTrend(data.monthlyExpenses)}
+            </div>
+          </aside>
+        </section>
       </section>
 
-      <section class="activity-layout" id="insight">
-        <article class="activity-panel">
-          <div class="section-heading">
-            <div>
-              <span>今月の動き</span>
-              <h2>最近の支出</h2>
-            </div>
-            <button type="button" class="text-action" data-open="expense-panel">すべて見る</button>
+      <section class="app-view manage-view" data-view="manage" aria-labelledby="manage-title">
+        <header class="manage-header">
+          <div>
+            <span class="eyebrow">月次管理</span>
+            <h1 id="manage-title" tabindex="-1">管理</h1>
+            <p>収入、固定費、予算、支出の内訳。</p>
           </div>
-          ${renderRecentExpenses(data.expenses)}
-        </article>
+          <div class="manage-budget"><span>今月の予算</span><strong>${store.yen(data.monthlyBudget)}</strong></div>
+        </header>
 
-        <aside class="month-pulse">
-          <div class="month-pulse-head">
-            <div>
-              <span class="eyebrow">月末の見込み</span>
-              <h2>${hasExpense ? (data.projectedBalance >= 0 ? "予算内のペースです" : "少し見直しが必要です") : "支出を追加して確認"}</h2>
-            </div>
-            <span class="risk-label ${data.risk === "高" ? "is-alert" : ""}">${hasExpense ? `赤字リスク ${data.risk}` : "未計算"}</span>
+        <div class="manage-workspace">
+          <nav class="manage-rail" aria-label="管理メニュー">
+            ${manageNavButton("expense", "receipt", "支出", "追加と履歴", true)}
+            ${manageNavButton("income", "wallet", "収入", "追加と履歴")}
+            ${manageNavButton("fixed", "home", "固定費", "毎月の支払い")}
+            ${manageNavButton("budget", "target", "予算", store.yen(data.monthlyBudget))}
+            ${manageNavButton("analysis", "chart", "分析", "カテゴリ別")}
+          </nav>
+          <div class="manage-panels">
+            ${renderExpenseDetails(data)}
+            ${renderIncomeDetails(data)}
+            ${renderFixedDetails(data)}
+            ${renderBudgetDetails(data)}
+            ${renderAnalysisDetails(data)}
           </div>
-          ${renderMonthGauge(data)}
-          <div class="metric-list">
-            <div><span>支出</span><strong>${store.yen(data.expenseTotal)}</strong></div>
-            <div><span>収入</span><strong>${store.yen(data.incomeTotal)}</strong></div>
-            <div><span>固定費</span><strong>${store.yen(data.fixedTotal)}</strong></div>
-          </div>
-          <div class="trend-wrap">
-            <div class="trend-label"><span>支出の推移</span><small>${data.daysLeft}日残り</small></div>
-            ${renderTrend(data.monthlyExpenses)}
-          </div>
-        </aside>
-      </section>
-
-      <section class="manage-zone" id="manage">
-        <div class="manage-copy">
-          <span>管理</span>
-          <h2>必要な時だけ、細かく。</h2>
-          <p>収入、固定費、予算、カテゴリ別の内訳をここから確認できます。</p>
-        </div>
-        <div class="menu-grid">
-          ${renderExpenseDetails(data)}
-          ${renderIncomeDetails(data)}
-          ${renderFixedDetails(data)}
-          ${renderBudgetDetails(data)}
-          ${renderAnalysisDetails(data)}
         </div>
       </section>
     </main>
 
-    <footer>Money Pace はデモ用アプリです。入力したデータはサーバー再起動時にリセットされます。</footer>
+    <nav class="mobile-nav" aria-label="メインナビゲーション">
+      <button type="button" data-route="home" aria-current="page">${icon("home")}<span>ホーム</span></button>
+      <button type="button" data-route="manage">${icon("settings")}<span>管理</span></button>
+    </nav>
+
+    <footer>Money Pace ・ データはサーバー再起動時にリセットされます</footer>
   </div>`;
 
   const template = fs.readFileSync(templatePath, "utf8");
@@ -320,10 +350,12 @@ function renderPage(message = "", messageType = "status") {
 }
 
 function renderExpenseDetails(data) {
-  return `<details class="menu-card" id="expense-panel">
-    <summary><span>${icon("receipt")} 支出</span><small>追加と履歴</small></summary>
-    <div class="menu-body">
+  return `<section class="manage-panel is-active" id="expense-panel" data-manage-panel="expense" aria-labelledby="expense-title">
+    <header class="panel-header"><div><span>支出管理</span><h2 id="expense-title">支出</h2></div><p>項目を指定して追加し、履歴を確認できます。</p></header>
+    <div class="panel-body">
       <form method="post" action="/expenses">
+        <input type="hidden" name="returnView" value="manage">
+        <input type="hidden" name="returnPanel" value="expense">
         <div class="grid-2">
           <div><label for="expenseAmount">金額</label><input id="expenseAmount" name="amount" type="number" min="1" placeholder="例: 1200" required></div>
           <div><label for="expenseCategory">カテゴリ</label><select id="expenseCategory" name="category">${optionTags(store.expenseCategories)}</select></div>
@@ -337,14 +369,16 @@ function renderExpenseDetails(data) {
       </form>
       <div class="table-wrap"><table><tr><th>日付</th><th>金額</th><th>カテゴリ</th><th>メモ</th><th>支払い方法</th><th></th></tr>${renderRows(data.expenses, "expense")}</table></div>
     </div>
-  </details>`;
+  </section>`;
 }
 
 function renderIncomeDetails(data) {
-  return `<details class="menu-card">
-    <summary><span>${icon("wallet")} 収入</span><small>追加と履歴</small></summary>
-    <div class="menu-body">
+  return `<section class="manage-panel" data-manage-panel="income" aria-labelledby="income-title">
+    <header class="panel-header"><div><span>収入管理</span><h2 id="income-title">収入</h2></div><p>今月の収入を追加し、履歴を管理できます。</p></header>
+    <div class="panel-body">
       <form method="post" action="/incomes">
+        <input type="hidden" name="returnView" value="manage">
+        <input type="hidden" name="returnPanel" value="income">
         <div class="grid-2">
           <div><label for="incomeAmount">金額</label><input id="incomeAmount" name="amount" type="number" min="1" placeholder="例: 50000" required></div>
           <div><label for="incomeSource">収入源</label><select id="incomeSource" name="source">${optionTags(store.incomeSources)}</select></div>
@@ -355,14 +389,16 @@ function renderIncomeDetails(data) {
       </form>
       <div class="table-wrap"><table><tr><th>日付</th><th>金額</th><th>収入源</th><th>メモ</th><th></th></tr>${renderRows(data.incomes, "income")}</table></div>
     </div>
-  </details>`;
+  </section>`;
 }
 
 function renderFixedDetails(data) {
-  return `<details class="menu-card">
-    <summary><span>${icon("home")} 固定費</span><small>管理と一覧</small></summary>
-    <div class="menu-body">
+  return `<section class="manage-panel" data-manage-panel="fixed" aria-labelledby="fixed-title">
+    <header class="panel-header"><div><span>固定費管理</span><h2 id="fixed-title">固定費</h2></div><p>毎月発生する支払いをまとめて管理します。</p></header>
+    <div class="panel-body">
       <form method="post" action="/fixed-costs">
+        <input type="hidden" name="returnView" value="manage">
+        <input type="hidden" name="returnPanel" value="fixed">
         <div class="grid-2">
           <div><label for="fixedName">名前</label><input id="fixedName" name="name" placeholder="例: スマホ代" required></div>
           <div><label for="fixedAmount">金額</label><input id="fixedAmount" name="amount" type="number" min="1" placeholder="例: 3000" required></div>
@@ -375,34 +411,46 @@ function renderFixedDetails(data) {
       </form>
       <div class="table-wrap"><table><tr><th>名前</th><th>金額</th><th>カテゴリ</th><th>支払日</th><th></th></tr>${renderRows(data.fixedCosts, "fixed")}</table></div>
     </div>
-  </details>`;
+  </section>`;
 }
 
 function renderBudgetDetails(data) {
-  return `<details class="menu-card">
-    <summary><span>${icon("target")} 予算</span><small>${store.yen(data.monthlyBudget)}</small></summary>
-    <div class="menu-body">
+  return `<section class="manage-panel compact-panel" data-manage-panel="budget" aria-labelledby="budget-title">
+    <header class="panel-header"><div><span>予算設定</span><h2 id="budget-title">予算</h2></div><p>今月使える金額の基準を設定します。</p></header>
+    <div class="panel-body">
       <form method="post" action="/budget">
+        <input type="hidden" name="returnView" value="manage">
+        <input type="hidden" name="returnPanel" value="budget">
         <label for="monthlyBudget">今月の予算</label>
         <input id="monthlyBudget" name="budget" type="number" min="1" value="${data.monthlyBudget}" required>
         <button class="btn" type="submit">予算を更新</button>
       </form>
     </div>
-  </details>`;
+  </section>`;
 }
 
 function renderAnalysisDetails(data) {
-  return `<details class="menu-card wide">
-    <summary><span>${icon("chart")} 分析</span><small>カテゴリ別支出</small></summary>
-    <div class="menu-body">
-      <div class="bars">${renderCategoryBars(data)}</div>
+  const hasCategoryData = data.byCategory.some((item) => item.amount > 0);
+  const advice = store.advice(data).map((message) => `<li>${escapeHtml(message)}</li>`).join("");
+  return `<section class="manage-panel" data-manage-panel="analysis" aria-labelledby="analysis-title">
+    <header class="panel-header"><div><span>支出分析</span><h2 id="analysis-title">カテゴリ別支出</h2></div><p>今月の支出をカテゴリごとに比較します。</p></header>
+    <div class="panel-body">
+      ${hasCategoryData ? `<div class="bars">${renderCategoryBars(data)}</div>` : '<div class="analysis-empty"><strong>分析できる支出がまだありません</strong><p>支出を追加すると、カテゴリごとの使い方をここで確認できます。</p></div>'}
+      <section class="advice-block" aria-labelledby="advice-title">
+        <span>今月のアドバイス</span>
+        <h3 id="advice-title">今のペースについて</h3>
+        <ul>${advice}</ul>
+      </section>
     </div>
-  </details>`;
+  </section>`;
 }
 
-function redirectWithMessage(res, message, type = "status") {
+function redirectWithMessage(res, message, type = "status", returnView = "home", returnPanel = "expense") {
   const typeQuery = type === "error" ? "&type=error" : "";
-  res.redirect("/?message=" + encodeURIComponent(message) + typeQuery);
+  const allowedPanels = ["expense", "income", "fixed", "budget", "analysis"];
+  const panel = allowedPanels.includes(returnPanel) ? returnPanel : "expense";
+  const hash = returnView === "manage" ? `#manage-${panel}` : "#home";
+  res.redirect("/?message=" + encodeURIComponent(message) + typeQuery + hash);
 }
 
 function showHome(req, res) {
@@ -421,37 +469,37 @@ function createQuickExpense(req, res) {
 
 function createExpense(req, res) {
   store.addExpense(req.body);
-  redirectWithMessage(res, "支出を追加しました");
+  redirectWithMessage(res, "支出を追加しました", "status", req.body.returnView, req.body.returnPanel);
 }
 
 function createIncome(req, res) {
   store.addIncome(req.body);
-  redirectWithMessage(res, "収入を追加しました");
+  redirectWithMessage(res, "収入を追加しました", "status", req.body.returnView, req.body.returnPanel);
 }
 
 function createFixedCost(req, res) {
   store.addFixedCost(req.body);
-  redirectWithMessage(res, "固定費を追加しました");
+  redirectWithMessage(res, "固定費を追加しました", "status", req.body.returnView, req.body.returnPanel);
 }
 
 function updateBudget(req, res) {
   store.updateMonthlyBudget(req.body.budget);
-  redirectWithMessage(res, "予算を更新しました");
+  redirectWithMessage(res, "予算を更新しました", "status", req.body.returnView, req.body.returnPanel);
 }
 
 function deleteExpense(req, res) {
   store.removeById(store.expenses, req.params.id);
-  redirectWithMessage(res, "支出を削除しました");
+  redirectWithMessage(res, "支出を削除しました", "status", req.body.returnView, req.body.returnPanel);
 }
 
 function deleteIncome(req, res) {
   store.removeById(store.incomes, req.params.id);
-  redirectWithMessage(res, "収入を削除しました");
+  redirectWithMessage(res, "収入を削除しました", "status", req.body.returnView, req.body.returnPanel);
 }
 
 function deleteFixedCost(req, res) {
   store.removeById(store.fixedCosts, req.params.id);
-  redirectWithMessage(res, "固定費を削除しました");
+  redirectWithMessage(res, "固定費を削除しました", "status", req.body.returnView, req.body.returnPanel);
 }
 
 module.exports = {
