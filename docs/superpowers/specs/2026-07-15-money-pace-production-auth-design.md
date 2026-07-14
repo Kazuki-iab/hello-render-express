@@ -244,6 +244,7 @@ Render uses these exact environment variable names:
 - `AUTH0_CLIENT_SECRET`
 - `AUTH0_ISSUER_BASE_URL`
 - `CSRF_SECRET`
+- `ACCOUNT_LINK_SECRET`
 
 Google client credentials are configured in the Auth0 Google social connection. Auth0 is configured with the exact production callback URL, logout URL, and web origin for `https://hello-render-express-cz16.onrender.com` plus local development URLs. Money Pace uses the same Auth0 application for the second authentication in account linking; it does not require Auth0 Management API credentials.
 
