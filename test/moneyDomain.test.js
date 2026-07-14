@@ -21,3 +21,14 @@ test("normalizers reject invalid money inputs", () => {
   assert.throws(() => money.normalizeFixedCost({ amount: "100", payDay: "32" }), /支払日/);
   assert.throws(() => money.normalizeIncome({ amount: "100", date: "2026-02-30" }), /日付/);
 });
+
+test("calendar defaults use Japan time on a UTC server", () => {
+  assert.equal(money.today(new Date("2026-06-30T15:30:00Z")), "2026-07-01");
+  const dashboard = money.calculateDashboard({
+    monthlyBudget: 80000,
+    expenses: [{ amount: 500, category: "食費", date: "2026-07-01" }],
+    incomes: [],
+    fixedCosts: [],
+  }, new Date("2026-06-30T15:30:00Z"));
+  assert.equal(dashboard.expenseTotal, 500);
+});

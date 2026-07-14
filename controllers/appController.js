@@ -129,12 +129,12 @@ function renderChatExpenses(expenses) {
 }
 
 function renderTrend(monthlyExpenses) {
-  const now = new Date();
-  const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const { year, month } = store.japanDateParts();
+  const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const totals = Array.from({ length: days }, () => 0);
   monthlyExpenses.forEach((item) => {
-    const date = new Date(item.date);
-    totals[date.getDate() - 1] += item.amount;
+    const day = Number(String(item.date).slice(8, 10));
+    totals[day - 1] += item.amount;
   });
 
   let running = 0;
@@ -211,16 +211,16 @@ function renderDayDetails(data, dateKey, selected) {
 }
 
 function renderCalendar(data) {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const days = new Date(year, month + 1, 0).getDate();
-  const firstWeekday = new Date(year, month, 1).getDay();
+  const current = store.japanDateParts();
+  const year = current.year;
+  const month = current.month - 1;
+  const days = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const firstWeekday = new Date(Date.UTC(year, month, 1)).getUTCDay();
   const transactionDates = [...data.monthlyExpenses, ...data.monthlyIncomes]
     .map((item) => item.date)
     .filter((date) => date.startsWith(`${year}-${String(month + 1).padStart(2, "0")}`))
     .sort();
-  const todayKey = monthDateKey(year, month, now.getDate());
+  const todayKey = monthDateKey(year, month, current.day);
   const selectedDate = transactionDates.includes(todayKey) ? todayKey : transactionDates.at(-1) || todayKey;
   const dailyTotals = Array.from({ length: days }, (_, index) => {
     const dateKey = monthDateKey(year, month, index + 1);
@@ -322,6 +322,7 @@ function manageNavButton(target, iconName, label, meta, current = false) {
 }
 
 function renderPage(data, currentUser, csrfToken = "", message = "", messageType = "status") {
+  const currentDate = store.japanDateParts();
   const hasExpense = data.monthlyExpenses.length > 0;
   const prediction =
     !hasExpense
@@ -358,7 +359,7 @@ function renderPage(data, currentUser, csrfToken = "", message = "", messageType
         <section class="balance-stage">
           <div class="balance-overview">
             <div class="balance-topline">
-              <span class="balance-period">${new Date().getMonth() + 1}月のペース</span>
+              <span class="balance-period">${currentDate.month}月のペース</span>
               <span class="balance-days">残り${data.daysLeft}日</span>
             </div>
             <div class="balance-copy">
@@ -438,7 +439,7 @@ function renderPage(data, currentUser, csrfToken = "", message = "", messageType
           </header>
 
           <div class="chat-thread" aria-label="支出入力の会話">
-            <div class="chat-date">${new Date().getMonth() + 1}月${new Date().getDate()}日</div>
+            <div class="chat-date">${currentDate.month}月${currentDate.day}日</div>
             <article class="chat-message is-assistant">
               <div class="assistant-avatar">M</div>
               <div class="chat-bubble"><span>使ったものと金額を送ってください。</span><small>例：ラーメン 950</small></div>

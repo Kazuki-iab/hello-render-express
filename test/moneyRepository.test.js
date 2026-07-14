@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createMoneyRepository } from "../repositories/moneyRepository.js";
+import { createMoneyRepository, monthBounds } from "../repositories/moneyRepository.js";
 
 test("delete operations always include the authenticated owner", async () => {
   const calls = [];
@@ -32,4 +32,10 @@ test("dashboard reads scope every table to one user", async () => {
   assert.equal(state.monthlyBudget, 80000);
   assert.equal(calls[0][1].where.userId_month.userId, "user-a");
   for (const [, query] of calls.slice(1)) assert.equal(query.where.userId, "user-a");
+});
+
+test("month bounds follow Japan time", () => {
+  const bounds = monthBounds(new Date("2026-06-30T15:30:00Z"));
+  assert.equal(bounds.start.toISOString(), "2026-07-01T00:00:00.000Z");
+  assert.equal(bounds.end.toISOString(), "2026-08-01T00:00:00.000Z");
 });

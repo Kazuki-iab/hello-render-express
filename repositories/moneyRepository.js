@@ -7,9 +7,13 @@ function asDatabaseDate(value) {
 }
 
 function monthBounds(now = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Tokyo", year: "numeric", month: "numeric" }).formatToParts(now);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const year = Number(values.year);
+  const month = Number(values.month) - 1;
   return {
-    start: new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1)),
-    end: new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1)),
+    start: new Date(Date.UTC(year, month, 1)),
+    end: new Date(Date.UTC(year, month + 1, 1)),
   };
 }
 

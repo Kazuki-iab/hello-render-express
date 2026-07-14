@@ -40,13 +40,25 @@ function getNumber(value) {
   return Number.isFinite(number) && number > 0 ? Math.round(number) : 0;
 }
 
-function today() {
-  return new Date().toISOString().slice(0, 10);
+function japanDateParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return { year: Number(values.year), month: Number(values.month), day: Number(values.day) };
+}
+
+function today(now = new Date()) {
+  const { year, month, day } = japanDateParts(now);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function isThisMonth(dateText, now = new Date()) {
-  const date = new Date(dateText || today());
-  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+  const { year, month } = japanDateParts(now);
+  return String(dateText || today(now)).startsWith(`${year}-${String(month).padStart(2, "0")}`);
 }
 
 function normalizeDate(value) {
@@ -126,7 +138,8 @@ function parseQuickExpense(input) {
 }
 
 function daysInMonth(date = new Date()) {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const { year, month } = japanDateParts(date);
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
 function addExpense(data) {
@@ -182,8 +195,9 @@ function calculateDashboard(state, now = new Date()) {
   const incomeTotal = monthlyIncomes.reduce((sum, item) => sum + item.amount, 0);
   const fixedTotal = stateFixedCosts.reduce((sum, item) => sum + item.amount, 0);
   const remaining = stateBudget + incomeTotal - expenseTotal - fixedTotal;
-  const daysLeft = Math.max(daysInMonth(now) - now.getDate() + 1, 1);
-  const dayOfMonth = Math.max(now.getDate(), 1);
+  const { day: currentDay } = japanDateParts(now);
+  const daysLeft = Math.max(daysInMonth(now) - currentDay + 1, 1);
+  const dayOfMonth = Math.max(currentDay, 1);
   const dailyRemaining = Math.floor(remaining / daysLeft);
   const paceExpense = (expenseTotal / dayOfMonth) * daysInMonth(now);
   const projectedBalance = Math.round(stateBudget + incomeTotal - fixedTotal - paceExpense);
@@ -249,6 +263,7 @@ export {
   fixedCosts,
   yen,
   today,
+  japanDateParts,
   parseQuickExpense,
   normalizeExpense,
   normalizeIncome,
