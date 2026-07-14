@@ -57,7 +57,7 @@ Money Pace remains an Express application hosted on Render.
 - **Browser session:** encrypted, HTTP-only cookie managed by the Auth0 Express integration
 - **Google OAuth credentials:** stored in Auth0, never exposed to the browser or committed to Git
 
-Auth0 is responsible for credentials, Google OAuth, email verification, password reset, and identity sessions. Money Pace is responsible for application authorization and ensuring that every financial record belongs to the authenticated local user.
+Auth0 is responsible for credentials, Google OAuth, email verification, password reset, and identity sessions. Money Pace is responsible for mapping one or more verified Auth0 identities to one local user, enforcing application authorization, and ensuring that every financial record belongs to that user.
 
 The existing application routes remain recognizable. Authentication middleware is added ahead of application routes, and controllers receive a local user ID resolved from the authenticated Auth0 subject.
 
@@ -70,16 +70,16 @@ The existing application routes remain recognizable. Authentication middleware i
 3. Auth0 sends a verification email.
 4. The visitor verifies the address and signs in.
 5. Money Pace receives the Auth0 callback and establishes an encrypted session cookie.
-6. Money Pace upserts a local user using the immutable Auth0 `sub` claim.
+6. Money Pace resolves the immutable Auth0 `sub` claim through a local user-identity record, creating a user and identity together on first login.
 7. The user reaches an empty, personal dashboard.
 
 ### New or returning user with Google
 
 1. The visitor chooses Google on the same login screen.
 2. Auth0 completes the Google OAuth flow.
-3. Money Pace receives the callback, establishes the session, and upserts the local user.
+3. Money Pace receives the callback, establishes the session, and resolves or creates the local user identity.
 4. If Auth0 finds another verified identity with the same email address, Money Pace offers account linking instead of merging automatically.
-5. Linking completes only after the user authenticates with both identities again. Both login methods then resolve to the same primary Auth0 subject and local Money Pace user.
+5. Linking completes only after the user authenticates with both identities again. Money Pace then maps both immutable Auth0 subjects to the same local Money Pace user.
 
 ### Password reset
 
@@ -96,7 +96,7 @@ The account menu initiates Auth0 logout, clears the Money Pace session, and retu
 
 Auth0 treats Google and database identities as separate users by default. Money Pace never links accounts based on an email match alone.
 
-When two verified identities appear to share an email address, account settings can offer `ログイン方法を連携`. The user must authenticate with the current identity and the identity being added. After Auth0 links the secondary identity to the primary identity, Money Pace keeps the primary local user and moves no data automatically between unrelated local users. If both identities already created Money Pace data before linking, the operation stops and requires a later, explicitly designed merge flow; no financial records are silently combined or discarded.
+When two verified identities appear to share an email address, account settings can offer `ログイン方法を連携`. The user must authenticate with the current identity and the identity being added. A signed, short-lived linking state binds the second authentication to the already authenticated local user. Money Pace then creates a second user-identity mapping for that local user. If the second identity already belongs to another local user, the operation stops and requires a later, explicitly designed merge flow; no financial records are silently combined or discarded.
 
 ## 5. Authorization Boundary
 
@@ -106,7 +106,7 @@ For every request:
 
 1. Auth0 middleware validates the session.
 2. Money Pace reads the Auth0 subject from the verified identity claims.
-3. The user service resolves that subject to a local database user.
+3. The user service resolves that subject through `UserIdentity` to a local database user.
 4. Controllers pass only the resolved local user ID to repositories.
 5. Every read, insert, update, and delete includes that user ID in its database condition.
 
@@ -117,11 +117,21 @@ Mutation and lookup routes return `404` when a record is absent or belongs to an
 ### User
 
 - `id`: UUID primary key
-- `authSubject`: unique Auth0 subject
 - `email`: current verified email snapshot
 - `displayName`: editable display name
 - `avatarUrl`: provider avatar URL when available
 - `createdAt`, `updatedAt`
+
+### UserIdentity
+
+- `id`: UUID primary key
+- `userId`: foreign key to User
+- `subject`: unique immutable Auth0 `sub` claim
+- `provider`: normalized provider name such as `google-oauth2` or `auth0`
+- `email`: verified email snapshot for the identity
+- `createdAt`, `updatedAt`
+- unique constraint on `subject`
+- index on `userId`
 
 ### MonthlyBudget
 
@@ -162,6 +172,7 @@ Deleting a local user is not exposed in the first release. Foreign keys use rest
 The current three-layer organization remains, with focused additions:
 
 - `auth/`: Auth0 configuration, route protection, and local-user resolution
+- `auth/linking`: signed short-lived linking state and second-authentication completion
 - `routes/`: HTTP route definitions only
 - `controllers/`: request validation, service calls, and responses
 - `services/`: authentication-aware application operations
@@ -232,11 +243,9 @@ Render uses these exact environment variable names:
 - `AUTH0_CLIENT_ID`
 - `AUTH0_CLIENT_SECRET`
 - `AUTH0_ISSUER_BASE_URL`
-- `AUTH0_MANAGEMENT_CLIENT_ID`
-- `AUTH0_MANAGEMENT_CLIENT_SECRET`
 - `CSRF_SECRET`
 
-Google client credentials are configured in the Auth0 Google social connection. Auth0 is configured with the exact production callback URL, logout URL, and web origin for `https://hello-render-express-cz16.onrender.com` plus local development URLs.
+Google client credentials are configured in the Auth0 Google social connection. Auth0 is configured with the exact production callback URL, logout URL, and web origin for `https://hello-render-express-cz16.onrender.com` plus local development URLs. Money Pace uses the same Auth0 application for the second authentication in account linking; it does not require Auth0 Management API credentials.
 
 A Render pre-deploy command applies reviewed Prisma migrations before the new application version receives traffic. A health endpoint verifies the server process without exposing user or database contents.
 
@@ -281,7 +290,7 @@ Production email verification and reset delivery use an Auth0-supported transact
 1. Create the Auth0 production application and connections.
 2. Create Render PostgreSQL.
 3. Add Prisma schema and migrations.
-4. Add Auth0 middleware and user resolution.
+4. Add Auth0 middleware, user-identity resolution, and signed account-link state.
 5. Replace the memory store with user-scoped repositories.
 6. Add the signed-out entry, account menu, and account settings UI.
 7. Add security middleware and tests.
