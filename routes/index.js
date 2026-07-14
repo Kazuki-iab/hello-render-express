@@ -1,5 +1,5 @@
-const express = require("express");
-const controller = require("../controllers/appController");
+import express from "express";
+import controller from "../controllers/appController.js";
 
 const router = express.Router();
 
@@ -13,4 +13,4 @@ router.post("/expenses/:id/delete", controller.deleteExpense);
 router.post("/incomes/:id/delete", controller.deleteIncome);
 router.post("/fixed-costs/:id/delete", controller.deleteFixedCost);
 
-module.exports = router;
+export default router;

@@ -185,7 +185,7 @@ function advice(data) {
   return messages;
 }
 
-module.exports = {
+export {
   expenseCategories,
   incomeSources,
   paymentMethods,

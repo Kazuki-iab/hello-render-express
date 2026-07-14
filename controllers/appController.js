@@ -1,6 +1,9 @@
-const fs = require("fs");
-const path = require("path");
-const store = require("../models/store");
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import * as store from "../models/store.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const templatePath = path.join(__dirname, "..", "public", "index.html");
 
@@ -659,7 +662,7 @@ function deleteFixedCost(req, res) {
   redirectWithMessage(res, "固定費を削除しました", "status", req.body.returnView, req.body.returnPanel);
 }
 
-module.exports = {
+const controller = {
   showHome,
   createQuickExpense,
   createExpense,
@@ -670,3 +673,5 @@ module.exports = {
   deleteIncome,
   deleteFixedCost,
 };
+
+export default controller;

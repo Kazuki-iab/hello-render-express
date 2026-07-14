@@ -1,10 +1,12 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import controller from "../controllers/appController.js";
+import * as store from "../models/store.js";
 
-const controller = require("../controllers/appController");
-const store = require("../models/store");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 function renderHome(query = {}) {
   let html = "";

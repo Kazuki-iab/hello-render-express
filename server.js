@@ -1,13 +1,11 @@
-const express = require("express");
-const routes = require("./routes");
+import { fileURLToPath } from "node:url";
+import { createApp } from "./app.js";
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+function startServer() {
+  const port = process.env.PORT || 3000;
+  return createApp().listen(port, () => console.log(`Server started on ${port}`));
+}
 
-app.use(express.urlencoded({ extended: false }));
-app.use(express.static("public", { index: false }));
-app.use("/", routes);
+if (process.argv[1] === fileURLToPath(import.meta.url)) startServer();
 
-app.listen(PORT, () => {
-  console.log(`Server started on ${PORT}`);
-});
+export { startServer };
