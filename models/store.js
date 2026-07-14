@@ -44,10 +44,61 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function isThisMonth(dateText) {
+function isThisMonth(dateText, now = new Date()) {
   const date = new Date(dateText || today());
-  const now = new Date();
   return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+}
+
+function normalizeDate(value) {
+  const text = String(value || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) throw new Error("日付を正しく入力してください");
+  const parsed = new Date(`${text}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== text) {
+    throw new Error("日付を正しく入力してください");
+  }
+  return text;
+}
+
+function normalizeExpense(input) {
+  const amount = getNumber(input.amount);
+  if (!amount) throw new Error("金額を正しく入力してください");
+  return {
+    amount,
+    category: expenseCategories.includes(input.category) ? input.category : "その他",
+    memo: String(input.memo || "").trim().slice(0, 120),
+    date: normalizeDate(input.date),
+    paymentMethod: paymentMethods.includes(input.paymentMethod) ? input.paymentMethod : "未設定",
+  };
+}
+
+function normalizeIncome(input) {
+  const amount = getNumber(input.amount);
+  if (!amount) throw new Error("金額を正しく入力してください");
+  return {
+    amount,
+    source: incomeSources.includes(input.source) ? input.source : "その他",
+    memo: String(input.memo || "").trim().slice(0, 120),
+    date: normalizeDate(input.date),
+  };
+}
+
+function normalizeFixedCost(input) {
+  const amount = getNumber(input.amount);
+  const payDay = Number(input.payDay);
+  if (!amount) throw new Error("金額を正しく入力してください");
+  if (!Number.isInteger(payDay) || payDay < 1 || payDay > 31) throw new Error("支払日を正しく入力してください");
+  return {
+    name: String(input.name || "").trim().slice(0, 40) || "固定費",
+    amount,
+    category: expenseCategories.includes(input.category) ? input.category : "その他",
+    payDay,
+  };
+}
+
+function normalizeBudget(value) {
+  const amount = getNumber(value);
+  if (!amount) throw new Error("予算を正しく入力してください");
+  return amount;
 }
 
 function inferCategory(text) {
@@ -119,21 +170,25 @@ function updateMonthlyBudget(value) {
   if (budget > 0) monthlyBudget = budget;
 }
 
-function calculateDashboard() {
-  const now = new Date();
-  const monthlyExpenses = expenses.filter((item) => isThisMonth(item.date));
-  const monthlyIncomes = incomes.filter((item) => isThisMonth(item.date));
+function calculateDashboard(state, now = new Date()) {
+  const source = state || { monthlyBudget, expenses, incomes, fixedCosts };
+  const stateBudget = source.monthlyBudget || 80000;
+  const stateExpenses = source.expenses || [];
+  const stateIncomes = source.incomes || [];
+  const stateFixedCosts = source.fixedCosts || [];
+  const monthlyExpenses = stateExpenses.filter((item) => isThisMonth(item.date, now));
+  const monthlyIncomes = stateIncomes.filter((item) => isThisMonth(item.date, now));
   const expenseTotal = monthlyExpenses.reduce((sum, item) => sum + item.amount, 0);
   const incomeTotal = monthlyIncomes.reduce((sum, item) => sum + item.amount, 0);
-  const fixedTotal = fixedCosts.reduce((sum, item) => sum + item.amount, 0);
-  const remaining = monthlyBudget + incomeTotal - expenseTotal - fixedTotal;
+  const fixedTotal = stateFixedCosts.reduce((sum, item) => sum + item.amount, 0);
+  const remaining = stateBudget + incomeTotal - expenseTotal - fixedTotal;
   const daysLeft = Math.max(daysInMonth(now) - now.getDate() + 1, 1);
   const dayOfMonth = Math.max(now.getDate(), 1);
   const dailyRemaining = Math.floor(remaining / daysLeft);
   const paceExpense = (expenseTotal / dayOfMonth) * daysInMonth(now);
-  const projectedBalance = Math.round(monthlyBudget + incomeTotal - fixedTotal - paceExpense);
-  const budgetUsed = Math.min(Math.round(((expenseTotal + fixedTotal) / Math.max(monthlyBudget, 1)) * 100), 999);
-  const risk = projectedBalance < 0 ? "高" : projectedBalance < monthlyBudget * 0.08 ? "中" : "低";
+  const projectedBalance = Math.round(stateBudget + incomeTotal - fixedTotal - paceExpense);
+  const budgetUsed = Math.min(Math.round(((expenseTotal + fixedTotal) / Math.max(stateBudget, 1)) * 100), 999);
+  const risk = projectedBalance < 0 ? "高" : projectedBalance < stateBudget * 0.08 ? "中" : "低";
   const byCategory = expenseCategories.map((category) => ({
     category,
     amount: monthlyExpenses.filter((item) => item.category === category).reduce((sum, item) => sum + item.amount, 0),
@@ -142,10 +197,10 @@ function calculateDashboard() {
   const topCategory = byCategory.slice().sort((a, b) => b.amount - a.amount)[0];
 
   return {
-    monthlyBudget,
-    expenses,
-    incomes,
-    fixedCosts,
+    monthlyBudget: stateBudget,
+    expenses: stateExpenses,
+    incomes: stateIncomes,
+    fixedCosts: stateFixedCosts,
     monthlyExpenses,
     monthlyIncomes,
     expenseTotal,
@@ -170,10 +225,10 @@ function advice(data) {
   if (data.expenseTotal > 0 && food / data.expenseTotal >= 0.4) {
     messages.push("食費がやや多めです。外食やコンビニを少し抑えると、月末に余裕が作れます。");
   }
-  if (data.fixedTotal / monthlyBudget >= 0.3) {
+  if (data.fixedTotal / data.monthlyBudget >= 0.3) {
     messages.push("固定費が重めです。サブスクや通信費を見直すと、毎月の負担を軽くできます。");
   }
-  if (data.remaining < monthlyBudget * 0.15) {
+  if (data.remaining < data.monthlyBudget * 0.15) {
     messages.push("残額が少なくなっています。今週は大きな買い物を控えると安心です。");
   }
   if (data.projectedBalance >= 0 && data.risk === "低") {
@@ -195,6 +250,10 @@ export {
   yen,
   today,
   parseQuickExpense,
+  normalizeExpense,
+  normalizeIncome,
+  normalizeFixedCost,
+  normalizeBudget,
   addExpense,
   addIncome,
   addFixedCost,
