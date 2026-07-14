@@ -82,7 +82,7 @@ function setRoute(route, options = {}) {
     if (location.hash !== hash) history.pushState({ route: nextRoute, panel: currentManagePanel }, "", hash);
   }
 
-  window.scrollTo({ top: 0, behavior: scrollBehavior });
+  window.scrollTo({ top: 0, behavior: "auto" });
 
   if (options.focus) {
     const heading = document.getElementById(nextRoute === "manage" ? "manage-title" : "home-title");
