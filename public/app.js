@@ -9,7 +9,7 @@ const managePanels = Array.from(document.querySelectorAll("[data-manage-panel]")
 const calendarDayButtons = Array.from(document.querySelectorAll("[data-calendar-day]"));
 const dayPanels = Array.from(document.querySelectorAll("[data-day-panel]"));
 const managePanelNames = managePanels.map((panel) => panel.dataset.managePanel);
-const supportedRoutes = new Set(["home", "input", "history", "manage"]);
+const supportedRoutes = new Set(["home", "input", "history", "manage", "account"]);
 let currentManagePanel = "expense";
 
 function readLocation() {

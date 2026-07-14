@@ -14,10 +14,12 @@ function identityFromClaims(claims = {}) {
 function createCurrentUserMiddleware(userRepository) {
   return async function attachCurrentUser(req, res, next) {
     try {
+      if (req.path === "/account/link/complete") return next();
       if (!req.oidc?.isAuthenticated?.()) return next();
       req.currentUser = await userRepository.resolveIdentity(identityFromClaims(req.oidc.user));
       next();
     } catch (error) {
+      if (/メール確認|ログイン情報/.test(error?.message || "")) error.status = 403;
       next(error);
     }
   };

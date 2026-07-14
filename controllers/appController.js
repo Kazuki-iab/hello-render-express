@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as store from "../models/store.js";
+import { createMemoryMoneyService } from "../services/memoryMoneyService.js";
+import { renderSignedOutPage } from "../views/signedOutPage.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -26,8 +28,12 @@ function progressPercent(value, max) {
   return Math.min(Math.round((value / max) * 100), 100);
 }
 
-function deleteButton(action, returnPanel) {
-  return `<form method="post" action="${action}" class="inline-form"><input type="hidden" name="returnView" value="manage"><input type="hidden" name="returnPanel" value="${returnPanel}"><button class="ghost danger" type="submit">削除</button></form>`;
+function csrfField(token) {
+  return token ? `<input type="hidden" name="_csrf" value="${escapeHtml(token)}">` : "";
+}
+
+function deleteButton(action, returnPanel, csrfToken) {
+  return `<form method="post" action="${action}" class="inline-form">${csrfField(csrfToken)}<input type="hidden" name="returnView" value="manage"><input type="hidden" name="returnPanel" value="${returnPanel}"><button class="ghost danger" type="submit">削除</button></form>`;
 }
 
 function categoryMark(category) {
@@ -256,7 +262,7 @@ function renderCalendar(data) {
   </div>`;
 }
 
-function renderRows(items, type) {
+function renderRows(items, type, csrfToken) {
   if (items.length === 0) {
     const colspan = type === "expense" ? 6 : 5;
     return `<tr><td colspan="${colspan}" class="empty">まだ追加されていません</td></tr>`;
@@ -273,7 +279,7 @@ function renderRows(items, type) {
           <td><span class="pill">${escapeHtml(item.category)}</span></td>
           <td>${escapeHtml(item.memo)}</td>
           <td>${escapeHtml(item.paymentMethod)}</td>
-          <td>${deleteButton(`/expenses/${item.id}/delete`, "expense")}</td>
+          <td>${deleteButton(`/expenses/${item.id}/delete`, "expense", csrfToken)}</td>
         </tr>`;
       }
       if (type === "income") {
@@ -282,7 +288,7 @@ function renderRows(items, type) {
           <td class="amount positive">${store.yen(item.amount)}</td>
           <td>${escapeHtml(item.source)}</td>
           <td>${escapeHtml(item.memo)}</td>
-          <td>${deleteButton(`/incomes/${item.id}/delete`, "income")}</td>
+          <td>${deleteButton(`/incomes/${item.id}/delete`, "income", csrfToken)}</td>
         </tr>`;
       }
       return `<tr>
@@ -290,7 +296,7 @@ function renderRows(items, type) {
         <td class="amount">${store.yen(item.amount)}</td>
         <td><span class="pill">${escapeHtml(item.category)}</span></td>
         <td>${escapeHtml(item.payDay)}日</td>
-        <td>${deleteButton(`/fixed-costs/${item.id}/delete`, "fixed")}</td>
+        <td>${deleteButton(`/fixed-costs/${item.id}/delete`, "fixed", csrfToken)}</td>
       </tr>`;
     })
     .join("");
@@ -315,8 +321,7 @@ function manageNavButton(target, iconName, label, meta, current = false) {
   </a>`;
 }
 
-function renderPage(message = "", messageType = "status") {
-  const data = store.calculateDashboard();
+function renderPage(data, currentUser, csrfToken = "", message = "", messageType = "status") {
   const hasExpense = data.monthlyExpenses.length > 0;
   const prediction =
     !hasExpense
@@ -341,7 +346,9 @@ function renderPage(message = "", messageType = "status") {
         <a class="nav-action" href="#input" data-route="input">入力</a>
         <a class="nav-action" href="#history" data-route="history">履歴</a>
         <a class="nav-action manage-action" href="#manage-expense" data-route="manage">${icon("settings")} 管理 ${icon("arrow")}</a>
+        ${currentUser ? `<a class="account-trigger" href="#account" data-route="account" aria-label="アカウント設定"><span>${escapeHtml((currentUser.displayName || currentUser.email || "M").slice(0, 1).toUpperCase())}</span></a>` : ""}
       </div>
+      ${currentUser ? `<a class="account-trigger mobile-account-trigger" href="#account" data-route="account" aria-label="アカウント設定"><span>${escapeHtml((currentUser.displayName || currentUser.email || "M").slice(0, 1).toUpperCase())}</span></a>` : ""}
     </header>
 
     ${message ? `<div class="message toast ${messageType === "error" ? "is-error" : ""}" role="${messageType === "error" ? "alert" : "status"}" aria-live="${messageType === "error" ? "assertive" : "polite"}">${escapeHtml(message)}</div>` : ""}
@@ -447,6 +454,7 @@ function renderPage(message = "", messageType = "status") {
               <button type="button" data-example="カフェ 650">カフェ <b>650</b></button>
             </div>
             <form method="post" action="/quick-expense" class="chat-composer">
+              ${csrfField(csrfToken)}
               <label class="sr-only" for="quickText">支出を1行で入力</label>
               <input id="quickText" name="quickText" placeholder="メッセージを入力" autocomplete="off" required>
               <button class="btn quick-submit" type="submit" aria-label="支出を追加">${icon("arrow")}</button>
@@ -483,14 +491,16 @@ function renderPage(message = "", messageType = "status") {
             ${manageNavButton("analysis", "chart", "分析", "カテゴリ別")}
           </nav>
           <div class="manage-panels">
-            ${renderExpenseDetails(data)}
-            ${renderIncomeDetails(data)}
-            ${renderFixedDetails(data)}
-            ${renderBudgetDetails(data)}
+            ${renderExpenseDetails(data, csrfToken)}
+            ${renderIncomeDetails(data, csrfToken)}
+            ${renderFixedDetails(data, csrfToken)}
+            ${renderBudgetDetails(data, csrfToken)}
             ${renderAnalysisDetails(data)}
           </div>
         </div>
       </section>
+
+      ${currentUser ? renderAccountView(currentUser, csrfToken) : ""}
     </main>
 
     <nav class="mobile-nav" aria-label="メインナビゲーション">
@@ -500,18 +510,19 @@ function renderPage(message = "", messageType = "status") {
       <a href="#manage-expense" data-route="manage">${icon("settings")}<span>管理</span></a>
     </nav>
 
-    <footer>Money Pace ・ データはサーバー再起動時にリセットされます</footer>
+    <footer>Money Pace ・ あなたのペースで、お金を整える。</footer>
   </div>`;
 
   const template = fs.readFileSync(templatePath, "utf8");
   return template.replace("{{content}}", content);
 }
 
-function renderExpenseDetails(data) {
+function renderExpenseDetails(data, csrfToken) {
   return `<section class="manage-panel is-active" id="manage-expense" data-manage-panel="expense" aria-labelledby="expense-title">
     <header class="panel-header"><div><span>支出管理</span><h2 id="expense-title">支出</h2></div><p>項目を指定して追加し、履歴を確認できます。</p></header>
     <div class="panel-body">
       <form method="post" action="/expenses">
+        ${csrfField(csrfToken)}
         <input type="hidden" name="returnView" value="manage">
         <input type="hidden" name="returnPanel" value="expense">
         <div class="grid-2">
@@ -525,16 +536,17 @@ function renderExpenseDetails(data) {
         </div>
         <button class="btn" type="submit">支出を追加</button>
       </form>
-      <div class="table-wrap"><table><tr><th>日付</th><th>金額</th><th>カテゴリ</th><th>メモ</th><th>支払い方法</th><th></th></tr>${renderRows(data.expenses, "expense")}</table></div>
+      <div class="table-wrap"><table><tr><th>日付</th><th>金額</th><th>カテゴリ</th><th>メモ</th><th>支払い方法</th><th></th></tr>${renderRows(data.expenses, "expense", csrfToken)}</table></div>
     </div>
   </section>`;
 }
 
-function renderIncomeDetails(data) {
+function renderIncomeDetails(data, csrfToken) {
   return `<section class="manage-panel" id="manage-income" data-manage-panel="income" aria-labelledby="income-title">
     <header class="panel-header"><div><span>収入管理</span><h2 id="income-title">収入</h2></div><p>今月の収入を追加し、履歴を管理できます。</p></header>
     <div class="panel-body">
       <form method="post" action="/incomes">
+        ${csrfField(csrfToken)}
         <input type="hidden" name="returnView" value="manage">
         <input type="hidden" name="returnPanel" value="income">
         <div class="grid-2">
@@ -545,16 +557,17 @@ function renderIncomeDetails(data) {
         <label for="incomeDate">日付</label><input id="incomeDate" name="date" type="date" value="${store.today()}" required>
         <button class="btn" type="submit">収入を追加</button>
       </form>
-      <div class="table-wrap"><table><tr><th>日付</th><th>金額</th><th>収入源</th><th>メモ</th><th></th></tr>${renderRows(data.incomes, "income")}</table></div>
+      <div class="table-wrap"><table><tr><th>日付</th><th>金額</th><th>収入源</th><th>メモ</th><th></th></tr>${renderRows(data.incomes, "income", csrfToken)}</table></div>
     </div>
   </section>`;
 }
 
-function renderFixedDetails(data) {
+function renderFixedDetails(data, csrfToken) {
   return `<section class="manage-panel" id="manage-fixed" data-manage-panel="fixed" aria-labelledby="fixed-title">
     <header class="panel-header"><div><span>固定費管理</span><h2 id="fixed-title">固定費</h2></div><p>毎月発生する支払いをまとめて管理します。</p></header>
     <div class="panel-body">
       <form method="post" action="/fixed-costs">
+        ${csrfField(csrfToken)}
         <input type="hidden" name="returnView" value="manage">
         <input type="hidden" name="returnPanel" value="fixed">
         <div class="grid-2">
@@ -567,16 +580,17 @@ function renderFixedDetails(data) {
         </div>
         <button class="btn" type="submit">固定費を追加</button>
       </form>
-      <div class="table-wrap"><table><tr><th>名前</th><th>金額</th><th>カテゴリ</th><th>支払日</th><th></th></tr>${renderRows(data.fixedCosts, "fixed")}</table></div>
+      <div class="table-wrap"><table><tr><th>名前</th><th>金額</th><th>カテゴリ</th><th>支払日</th><th></th></tr>${renderRows(data.fixedCosts, "fixed", csrfToken)}</table></div>
     </div>
   </section>`;
 }
 
-function renderBudgetDetails(data) {
+function renderBudgetDetails(data, csrfToken) {
   return `<section class="manage-panel compact-panel" id="manage-budget" data-manage-panel="budget" aria-labelledby="budget-title">
     <header class="panel-header"><div><span>予算設定</span><h2 id="budget-title">予算</h2></div><p>今月使える金額の基準を設定します。</p></header>
     <div class="panel-body">
       <form method="post" action="/budget">
+        ${csrfField(csrfToken)}
         <input type="hidden" name="returnView" value="manage">
         <input type="hidden" name="returnPanel" value="budget">
         <label for="monthlyBudget">今月の予算</label>
@@ -603,75 +617,109 @@ function renderAnalysisDetails(data) {
   </section>`;
 }
 
+function renderAccountView(user, csrfToken) {
+  const identities = user.identities || [];
+  const hasGoogle = identities.some((item) => item.provider.includes("google"));
+  const hasPassword = identities.some((item) => item.provider === "auth0");
+  return `<section class="app-view account-view" id="account" data-view="account" aria-labelledby="account-title">
+    <header class="account-header">
+      <span class="eyebrow">ACCOUNT</span>
+      <h1 id="account-title" tabindex="-1">アカウント設定</h1>
+      <p>プロフィールとログイン方法を管理します。</p>
+    </header>
+    <div class="account-layout">
+      <section class="account-card">
+        <div class="account-person"><span>${escapeHtml((user.displayName || user.email).slice(0, 1).toUpperCase())}</span><div><strong>${escapeHtml(user.displayName)}</strong><small>${escapeHtml(user.email)}</small></div></div>
+        <form method="post" action="/account/profile">
+          ${csrfField(csrfToken)}
+          <label for="displayName">表示名</label>
+          <input id="displayName" name="displayName" maxlength="40" value="${escapeHtml(user.displayName)}" required>
+          <button class="btn" type="submit">プロフィールを更新</button>
+        </form>
+      </section>
+      <section class="account-card">
+        <div class="panel-header"><div><span>ログイン</span><h2>ログイン方法</h2></div></div>
+        <div class="identity-list">
+          <div><span class="identity-icon">G</span><strong>Google</strong><small>${hasGoogle ? "接続済み" : "未接続"}</small></div>
+          <div><span class="identity-icon">@</span><strong>メールアドレス</strong><small>${hasPassword ? "接続済み" : "未接続"}</small></div>
+        </div>
+        ${!hasGoogle ? `<form method="post" action="/account/link/google">${csrfField(csrfToken)}<button class="secondary-button" type="submit">Googleを接続</button></form>` : ""}
+        ${!hasPassword ? `<form method="post" action="/account/link/password">${csrfField(csrfToken)}<button class="secondary-button" type="submit">メールアドレスを接続</button></form>` : ""}
+        <a class="logout-link" href="/logout">ログアウト</a>
+      </section>
+    </div>
+  </section>`;
+}
+
 function redirectWithMessage(res, message, type = "status", returnView = "home", returnPanel = "expense") {
   const typeQuery = type === "error" ? "&type=error" : "";
   const allowedPanels = ["expense", "income", "fixed", "budget", "analysis"];
-  const allowedViews = ["home", "input", "history", "manage"];
+  const allowedViews = ["home", "input", "history", "manage", "account"];
   const panel = allowedPanels.includes(returnPanel) ? returnPanel : "expense";
   const view = allowedViews.includes(returnView) ? returnView : "home";
   const hash = view === "manage" ? `#manage-${panel}` : `#${view}`;
   res.redirect("/?message=" + encodeURIComponent(message) + typeQuery + hash);
 }
 
-function showHome(req, res) {
-  res.send(renderPage(req.query.message, req.query.type));
-}
+function createAppController({ moneyService, userRepository, csrfToken = () => "", authRequired = true }) {
+  const userId = (req) => req.currentUser?.id || "local-demo";
+  const action = (operation, success, view, panel) => async (req, res, next) => {
+    try {
+      await operation(userId(req), req);
+      redirectWithMessage(res, success, "status", req.body.returnView || view, req.body.returnPanel || panel);
+    } catch (error) {
+      if (error instanceof Error && /入力|金額|日付|予算|支払日/.test(error.message)) {
+        return redirectWithMessage(res, error.message, "error", req.body.returnView || view, req.body.returnPanel || panel);
+      }
+      next(error);
+    }
+  };
 
-function createQuickExpense(req, res) {
-  const parsed = store.parseQuickExpense(req.body.quickText);
-  if (!parsed) {
-    redirectWithMessage(res, "「ラーメン 950」のように、メモと金額を入力してください", "error", "input");
-    return;
+  async function showHome(req, res, next) {
+    try {
+      if (authRequired && !req.currentUser) return res.send(renderSignedOutPage(req.query.message));
+      const data = await moneyService.getDashboard(userId(req));
+      const user = req.currentUser && userRepository ? await userRepository.findUser(req.currentUser.id) : req.currentUser;
+      res.send(renderPage(data, user, csrfToken(req, res), req.query.message, req.query.type));
+    } catch (error) {
+      next(error);
+    }
   }
-  store.addExpense(parsed);
-  redirectWithMessage(res, `${parsed.memo}を「${parsed.category}」として追加しました`, "status", "input");
+
+  async function createQuickExpense(req, res, next) {
+    try {
+      const parsed = await moneyService.addQuickExpense(userId(req), req.body.quickText);
+      redirectWithMessage(res, `${parsed.memo}を「${parsed.category}」として追加しました`, "status", "input");
+    } catch (error) {
+      if (error instanceof Error && /入力してください/.test(error.message)) return redirectWithMessage(res, error.message, "error", "input");
+      next(error);
+    }
+  }
+
+  const createExpense = action((id, req) => moneyService.addExpense(id, req.body), "支出を追加しました", "manage", "expense");
+  const createIncome = action((id, req) => moneyService.addIncome(id, req.body), "収入を追加しました", "manage", "income");
+  const createFixedCost = action((id, req) => moneyService.addFixedCost(id, req.body), "固定費を追加しました", "manage", "fixed");
+  const updateBudget = action((id, req) => moneyService.updateBudget(id, req.body.budget), "予算を更新しました", "manage", "budget");
+  const deleteExpense = action((id, req) => moneyService.deleteExpense(id, req.params.id), "支出を削除しました", "manage", "expense");
+  const deleteIncome = action((id, req) => moneyService.deleteIncome(id, req.params.id), "収入を削除しました", "manage", "income");
+  const deleteFixedCost = action((id, req) => moneyService.deleteFixedCost(id, req.params.id), "固定費を削除しました", "manage", "fixed");
+
+  async function updateProfile(req, res, next) {
+    try {
+      const displayName = String(req.body.displayName || "").trim();
+      if (!displayName || displayName.length > 40) throw new Error("表示名は1〜40文字で入力してください");
+      await userRepository.updateProfile(req.currentUser.id, displayName);
+      redirectWithMessage(res, "プロフィールを更新しました", "status", "account");
+    } catch (error) {
+      if (error instanceof Error && /表示名/.test(error.message)) return redirectWithMessage(res, error.message, "error", "account");
+      next(error);
+    }
+  }
+
+  return { showHome, createQuickExpense, createExpense, createIncome, createFixedCost, updateBudget, deleteExpense, deleteIncome, deleteFixedCost, updateProfile };
 }
 
-function createExpense(req, res) {
-  store.addExpense(req.body);
-  redirectWithMessage(res, "支出を追加しました", "status", req.body.returnView, req.body.returnPanel);
-}
-
-function createIncome(req, res) {
-  store.addIncome(req.body);
-  redirectWithMessage(res, "収入を追加しました", "status", req.body.returnView, req.body.returnPanel);
-}
-
-function createFixedCost(req, res) {
-  store.addFixedCost(req.body);
-  redirectWithMessage(res, "固定費を追加しました", "status", req.body.returnView, req.body.returnPanel);
-}
-
-function updateBudget(req, res) {
-  store.updateMonthlyBudget(req.body.budget);
-  redirectWithMessage(res, "予算を更新しました", "status", req.body.returnView, req.body.returnPanel);
-}
-
-function deleteExpense(req, res) {
-  store.removeById(store.expenses, req.params.id);
-  redirectWithMessage(res, "支出を削除しました", "status", req.body.returnView, req.body.returnPanel);
-}
-
-function deleteIncome(req, res) {
-  store.removeById(store.incomes, req.params.id);
-  redirectWithMessage(res, "収入を削除しました", "status", req.body.returnView, req.body.returnPanel);
-}
-
-function deleteFixedCost(req, res) {
-  store.removeById(store.fixedCosts, req.params.id);
-  redirectWithMessage(res, "固定費を削除しました", "status", req.body.returnView, req.body.returnPanel);
-}
-
-const controller = {
-  showHome,
-  createQuickExpense,
-  createExpense,
-  createIncome,
-  createFixedCost,
-  updateBudget,
-  deleteExpense,
-  deleteIncome,
-  deleteFixedCost,
-};
+const controller = createAppController({ moneyService: createMemoryMoneyService(), authRequired: false });
 
 export default controller;
+export { createAppController, renderPage };

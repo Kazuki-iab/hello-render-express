@@ -8,20 +8,20 @@ import * as store from "../models/store.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function renderHome(query = {}) {
+async function renderHome(query = {}) {
   let html = "";
-  controller.showHome({ query }, { send(value) { html = value; } });
+  await controller.showHome({ query }, { send(value) { html = value; } }, (error) => { throw error; });
   return html;
 }
 
-function captureRedirect(handler, body, params = {}) {
+async function captureRedirect(handler, body, params = {}) {
   let location = "";
-  handler({ body, params }, { redirect(value) { location = value; } });
+  await handler({ body, params }, { redirect(value) { location = value; } }, (error) => { throw error; });
   return location;
 }
 
-test("home renders four focused app views", () => {
-  const html = renderHome();
+test("home renders four focused app views", async () => {
+  const html = await renderHome();
 
   assert.match(html, /data-view="home"/);
   assert.match(html, /data-view="input"/);
@@ -40,9 +40,9 @@ test("home renders four focused app views", () => {
   assert.equal((html.match(/data-manage-panel=/g) || []).length, 5);
 });
 
-test("management forms return to their active panel", () => {
+test("management forms return to their active panel", async () => {
   const incomeCount = store.incomes.length;
-  const location = captureRedirect(controller.createIncome, {
+  const location = await captureRedirect(controller.createIncome, {
     amount: "50000",
     source: "バイト代",
     memo: "6月分",
@@ -55,17 +55,17 @@ test("management forms return to their active panel", () => {
   assert.match(location, /#manage-income$/);
 });
 
-test("quick input returns to the conversation and infers a category", () => {
+test("quick input returns to the conversation and infers a category", async () => {
   const expenseCount = store.expenses.length;
-  const location = captureRedirect(controller.createQuickExpense, { quickText: "ラーメン 950" });
+  const location = await captureRedirect(controller.createQuickExpense, { quickText: "ラーメン 950" });
 
   assert.equal(store.expenses.length, expenseCount + 1);
   assert.equal(store.expenses.at(-1).category, "食費");
   assert.match(location, /#input$/);
 });
 
-test("input view renders a conversation composer", () => {
-  const html = renderHome();
+test("input view renders a conversation composer", async () => {
+  const html = await renderHome();
 
   assert.match(html, /class="chat-shell"/);
   assert.match(html, /class="chat-thread"/);
@@ -73,8 +73,8 @@ test("input view renders a conversation composer", () => {
   assert.match(html, /action="\/quick-expense"/);
 });
 
-test("history view renders every day in the current month", () => {
-  const html = renderHome();
+test("history view renders every day in the current month", async () => {
+  const html = await renderHome();
   const now = new Date();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 
@@ -83,10 +83,10 @@ test("history view renders every day in the current month", () => {
   assert.equal((html.match(/data-day-panel=/g) || []).length, daysInMonth);
 });
 
-test("client navigation supports four routes and calendar selection", () => {
+test("client navigation supports account routing and calendar selection", () => {
   const client = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");
 
-  assert.match(client, /supportedRoutes = new Set\(\["home", "input", "history", "manage"\]\)/);
+  assert.match(client, /supportedRoutes = new Set\(\["home", "input", "history", "manage", "account"\]\)/);
   assert.match(client, /function setCalendarDay/);
 });
 
@@ -97,8 +97,8 @@ test("client prevents duplicate form submissions", () => {
   assert.match(client, /button\.disabled = true/);
 });
 
-test("primary navigation keeps usable fragment links without JavaScript", () => {
-  const html = renderHome();
+test("primary navigation keeps usable fragment links without JavaScript", async () => {
+  const html = await renderHome();
 
   for (const route of ["home", "input", "history"]) {
     assert.match(html, new RegExp(`id="${route}"[^>]*data-view="${route}"`));
@@ -114,9 +114,9 @@ test("compact delete controls keep a 44 pixel touch target", () => {
   assert.match(styles, /\.ghost\s*\{\s*min-height:\s*44px/);
 });
 
-test("delete actions preserve the management location", () => {
+test("delete actions preserve the management location", async () => {
   const item = store.expenses.at(-1);
-  const location = captureRedirect(
+  const location = await captureRedirect(
     controller.deleteExpense,
     { returnView: "manage", returnPanel: "expense" },
     { id: String(item.id) }
