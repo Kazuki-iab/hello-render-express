@@ -1,0 +1,106 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../generated/prisma"
+  moduleFormat         = "esm"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String                @id @default(uuid()) @db.Uuid
+  email        String
+  displayName  String
+  avatarUrl    String?
+  identities   UserIdentity[]
+  budgets      MonthlyBudget[]
+  expenses     Expense[]
+  incomes      Income[]
+  fixedCosts   FixedCost[]
+  linkAttempts IdentityLinkAttempt[]
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+}
+
+model UserIdentity {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  subject   String   @unique
+  provider  String
+  email     String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model MonthlyBudget {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  month     DateTime @db.Date
+  amount    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, month])
+}
+
+model Expense {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  amount        Int
+  category      String
+  memo          String   @default("")
+  date          DateTime @db.Date
+  paymentMethod String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, date])
+}
+
+model Income {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  amount    Int
+  source    String
+  memo      String   @default("")
+  date      DateTime @db.Date
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+}
+
+model FixedCost {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  name      String
+  amount    Int
+  category  String
+  payDay    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model IdentityLinkAttempt {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @db.Uuid
+  tokenHash      String    @unique
+  targetProvider String
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt      DateTime  @default(now())
+
+  @@index([userId, expiresAt])
+}

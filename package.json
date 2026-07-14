@@ -6,7 +6,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node --import tsx server.js",
-    "test": "node --import tsx --test"
+    "test": "node --import tsx --test",
+    "db:generate": "prisma generate",
+    "db:validate": "prisma validate",
+    "db:migrate:deploy": "prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
