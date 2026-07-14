@@ -19,7 +19,7 @@ function locationHash(route, panel = "expense") {
 }
 
 function fitBalanceAmount() {
-  const amount = document.querySelector(".balance-primary h1:not(.empty-title)");
+  const amount = document.querySelector(".balance-overview h1:not(.empty-title)");
   if (!amount) return;
 
   amount.style.fontSize = "";
@@ -132,6 +132,7 @@ document.querySelectorAll("form").forEach((form) => {
     if (!button) return;
     button.classList.add("is-submitting");
     button.setAttribute("aria-busy", "true");
+    form.closest(".quick-entry")?.classList.add("is-launching");
   });
 });
 
@@ -157,6 +158,8 @@ window.addEventListener("load", () => {
   if (message) {
     message.classList.add("is-visible");
     if (!message.classList.contains("is-error")) {
+      document.documentElement.classList.add("transaction-complete");
+      window.setTimeout(() => document.documentElement.classList.remove("transaction-complete"), reduceMotion ? 0 : 1100);
       window.setTimeout(() => {
         message.classList.remove("is-visible");
         window.setTimeout(() => { message.hidden = true; }, reduceMotion ? 0 : 240);

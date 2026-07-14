@@ -23,6 +23,10 @@ test("home renders focused home and dedicated management views", () => {
   assert.match(html, /data-view="manage"/);
   assert.doesNotMatch(html, /data-view="manage"[^>]*hidden/);
   assert.match(html, /data-route="manage"/);
+  assert.match(html, /class="balance-overview"/);
+  assert.match(html, /class="pace-strip"/);
+  assert.match(html, /class="quick-entry quick-command"/);
+  assert.match(html, /class="activity-layout ledger-layout"/);
   assert.equal((html.match(/data-manage-target=/g) || []).length, 5);
   assert.equal((html.match(/data-manage-panel=/g) || []).length, 5);
 });

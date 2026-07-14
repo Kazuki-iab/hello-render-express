@@ -136,13 +136,13 @@ function renderTrend(monthlyExpenses) {
 
 function renderMonthGauge(data) {
   const percent = Math.min(data.budgetUsed, 100);
-  return `<div class="budget-gauge" style="--meter:${percent};">
-    <div class="budget-ring"><span>${data.budgetUsed}%</span></div>
-    <div class="budget-gauge-copy">
+  return `<div class="budget-meter" style="--meter:${percent};">
+    <div class="budget-meter-head">
       <span>予算消化率</span>
-      <strong>${store.yen(data.expenseTotal + data.fixedTotal)}</strong>
-      <p>${store.yen(data.monthlyBudget)} のうち</p>
+      <strong>${data.budgetUsed}%</strong>
     </div>
+    <div class="budget-meter-track" aria-hidden="true"><span></span></div>
+    <div class="budget-meter-foot"><span>${store.yen(data.expenseTotal + data.fixedTotal)} 使用</span><span>予算 ${store.yen(data.monthlyBudget)}</span></div>
   </div>`;
 }
 
@@ -237,30 +237,41 @@ function renderPage(message = "", messageType = "status") {
     <main class="view-shell">
       <section class="app-view is-active" data-view="home" aria-labelledby="home-title">
         <section class="balance-stage">
-          <div class="balance-primary">
+          <div class="balance-overview">
             <div class="balance-topline">
-              <span class="balance-period">今月</span>
+              <span class="balance-period">${new Date().getMonth() + 1}月のペース</span>
               <span class="balance-days">残り${data.daysLeft}日</span>
             </div>
-            <p class="balance-label">今月あと使える金額</p>
-            <h1 id="home-title" class="${hasExpense ? amountClass : "empty-title"}" tabindex="-1">${heroAmount}</h1>
-            <p class="balance-note">${heroNote}</p>
-            <div class="balance-context">
-              <div>
+            <div class="balance-copy">
+              <p class="balance-label">今月あと使える金額</p>
+              <h1 id="home-title" class="${hasExpense ? amountClass : "empty-title"}" tabindex="-1">${heroAmount}</h1>
+              <p class="balance-note">${heroNote}</p>
+            </div>
+            <div class="pace-strip">
+              <div class="pace-item">
                 <span>今日使える目安</span>
                 <strong>${hasExpense ? store.yen(data.dailyRemaining) : "-"}</strong>
               </div>
-              <p>${prediction}</p>
+              <div class="pace-item pace-forecast">
+                <span>月末の見込み</span>
+                <strong>${hasExpense ? store.yen(data.projectedBalance) : "-"}</strong>
+                <small>${prediction}</small>
+              </div>
+              <div class="pace-item pace-budget">
+                <span>予算消化率</span>
+                <strong>${data.budgetUsed}%</strong>
+                <div class="pace-track" aria-hidden="true"><span style="width:${Math.min(data.budgetUsed, 100)}%"></span></div>
+              </div>
             </div>
           </div>
 
-          <div class="quick-entry" aria-label="クイック入力">
+          <div class="quick-entry quick-command" aria-label="クイック入力">
             <div class="quick-heading">
               <div>
                 <span class="eyebrow">クイック入力</span>
-                <h2>支出をすぐ追加</h2>
+                <h2>支出を1行で追加</h2>
               </div>
-              <span class="quick-hint">メモと金額だけ</span>
+              <span class="quick-hint">メモ + 金額</span>
             </div>
             <form method="post" action="/quick-expense" class="quick-form">
               <label class="sr-only" for="quickText">支出を1行で入力</label>
@@ -277,8 +288,8 @@ function renderPage(message = "", messageType = "status") {
           </div>
         </section>
 
-        <section class="activity-layout">
-          <article class="activity-panel">
+        <section class="activity-layout ledger-layout">
+          <article class="activity-panel ledger-panel">
             <div class="section-heading">
               <div><span>最近の動き</span><h2>最近の支出</h2></div>
               <button type="button" class="text-action" data-go-manage="expense">履歴を管理 ${icon("arrow")}</button>
@@ -286,11 +297,11 @@ function renderPage(message = "", messageType = "status") {
             ${renderRecentExpenses(data.expenses)}
           </article>
 
-          <aside class="month-pulse">
+          <aside class="month-pulse snapshot-rail">
             <div class="month-pulse-head">
               <div>
-                <span class="eyebrow">月末の見込み</span>
-                <h2>${hasExpense ? (data.projectedBalance >= 0 ? "予算内のペース" : "見直しが必要") : "支出を追加して確認"}</h2>
+                <span class="eyebrow">今月のサマリー</span>
+                <h2>${hasExpense ? (data.projectedBalance >= 0 ? "予定どおり" : "少し見直し") : "まだ静かな月です"}</h2>
               </div>
               <span class="risk-label ${data.risk === "高" ? "is-alert" : ""}">${hasExpense ? `リスク ${data.risk}` : "未計算"}</span>
             </div>
@@ -313,7 +324,7 @@ function renderPage(message = "", messageType = "status") {
           <div>
             <span class="eyebrow">月次管理</span>
             <h1 id="manage-title" tabindex="-1">管理</h1>
-            <p>収入、固定費、予算、支出の内訳。</p>
+            <p>お金の流れと設定をまとめて管理します。</p>
           </div>
           <div class="manage-budget"><span>今月の予算</span><strong>${store.yen(data.monthlyBudget)}</strong></div>
         </header>
