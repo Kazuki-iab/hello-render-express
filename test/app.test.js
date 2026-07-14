@@ -1,5 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const controller = require("../controllers/appController");
 const store = require("../models/store");
@@ -16,17 +18,22 @@ function captureRedirect(handler, body, params = {}) {
   return location;
 }
 
-test("home renders focused home and dedicated management views", () => {
+test("home renders four focused app views", () => {
   const html = renderHome();
 
   assert.match(html, /data-view="home"/);
+  assert.match(html, /data-view="input"/);
+  assert.match(html, /data-view="history"/);
   assert.match(html, /data-view="manage"/);
   assert.doesNotMatch(html, /data-view="manage"[^>]*hidden/);
   assert.match(html, /data-route="manage"/);
+  assert.equal((html.match(/data-route="input"/g) || []).length >= 2, true);
+  assert.equal((html.match(/data-route="history"/g) || []).length >= 2, true);
   assert.match(html, /class="balance-overview"/);
   assert.match(html, /class="pace-strip"/);
   assert.match(html, /class="quick-entry quick-command"/);
   assert.match(html, /class="activity-layout ledger-layout"/);
+  assert.match(html, /class="text-action" href="#history" data-route="history">履歴を見る/);
   assert.equal((html.match(/data-manage-target=/g) || []).length, 5);
   assert.equal((html.match(/data-manage-panel=/g) || []).length, 5);
 });
@@ -46,13 +53,63 @@ test("management forms return to their active panel", () => {
   assert.match(location, /#manage-income$/);
 });
 
-test("quick input keeps the user on home and infers a category", () => {
+test("quick input returns to the conversation and infers a category", () => {
   const expenseCount = store.expenses.length;
   const location = captureRedirect(controller.createQuickExpense, { quickText: "ラーメン 950" });
 
   assert.equal(store.expenses.length, expenseCount + 1);
   assert.equal(store.expenses.at(-1).category, "食費");
-  assert.match(location, /#home$/);
+  assert.match(location, /#input$/);
+});
+
+test("input view renders a conversation composer", () => {
+  const html = renderHome();
+
+  assert.match(html, /class="chat-shell"/);
+  assert.match(html, /class="chat-thread"/);
+  assert.match(html, /class="chat-composer"/);
+  assert.match(html, /action="\/quick-expense"/);
+});
+
+test("history view renders every day in the current month", () => {
+  const html = renderHome();
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+
+  assert.match(html, /class="calendar-grid"/);
+  assert.equal((html.match(/data-calendar-day=/g) || []).length, daysInMonth);
+  assert.equal((html.match(/data-day-panel=/g) || []).length, daysInMonth);
+});
+
+test("client navigation supports four routes and calendar selection", () => {
+  const client = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");
+
+  assert.match(client, /supportedRoutes = new Set\(\["home", "input", "history", "manage"\]\)/);
+  assert.match(client, /function setCalendarDay/);
+});
+
+test("client prevents duplicate form submissions", () => {
+  const client = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");
+
+  assert.match(client, /form\.dataset\.submitting === "true"/);
+  assert.match(client, /button\.disabled = true/);
+});
+
+test("primary navigation keeps usable fragment links without JavaScript", () => {
+  const html = renderHome();
+
+  for (const route of ["home", "input", "history"]) {
+    assert.match(html, new RegExp(`id="${route}"[^>]*data-view="${route}"`));
+    assert.match(html, new RegExp(`href="#${route}"[^>]*data-route="${route}"`));
+  }
+  assert.match(html, /href="#manage-expense"[^>]*data-manage-target="expense"/);
+  assert.match(html, /id="manage-expense"[^>]*data-manage-panel="expense"/);
+});
+
+test("compact delete controls keep a 44 pixel touch target", () => {
+  const styles = fs.readFileSync(path.join(__dirname, "..", "public", "style.css"), "utf8");
+
+  assert.match(styles, /\.ghost\s*\{\s*min-height:\s*44px/);
 });
 
 test("delete actions preserve the management location", () => {

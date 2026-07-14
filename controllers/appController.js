@@ -100,6 +100,25 @@ function renderRecentExpenses(expenses) {
     .join("")}</div>`;
 }
 
+function renderChatExpenses(expenses) {
+  const recent = expenses.slice().reverse().slice(0, 5).reverse();
+  if (recent.length === 0) {
+    return `<div class="chat-empty-note">まだ会話はありません。下の入力欄から最初の支出を送ってみましょう。</div>`;
+  }
+
+  return recent
+    .map(
+      (item) => `<article class="chat-message is-user">
+        <div class="chat-bubble">
+          <span>${escapeHtml(item.memo || item.category)}</span>
+          <strong>${store.yen(item.amount)}</strong>
+          <small>${escapeHtml(item.category)} ・ ${relativeDate(item.date)}</small>
+        </div>
+      </article>`
+    )
+    .join("");
+}
+
 function renderTrend(monthlyExpenses) {
   const now = new Date();
   const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -143,6 +162,94 @@ function renderMonthGauge(data) {
     </div>
     <div class="budget-meter-track" aria-hidden="true"><span></span></div>
     <div class="budget-meter-foot"><span>${store.yen(data.expenseTotal + data.fixedTotal)} 使用</span><span>予算 ${store.yen(data.monthlyBudget)}</span></div>
+  </div>`;
+}
+
+function monthDateKey(year, month, day) {
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function renderDayDetails(data, dateKey, selected) {
+  const expenses = data.monthlyExpenses.filter((item) => item.date === dateKey);
+  const incomes = data.monthlyIncomes.filter((item) => item.date === dateKey);
+  const expenseTotal = expenses.reduce((sum, item) => sum + item.amount, 0);
+  const incomeTotal = incomes.reduce((sum, item) => sum + item.amount, 0);
+  const date = new Date(`${dateKey}T00:00:00`);
+  const heading = `${date.getMonth() + 1}月${date.getDate()}日`;
+  const transactions = [
+    ...expenses.map((item) => ({ type: "expense", label: item.memo || item.category, meta: item.category, amount: item.amount })),
+    ...incomes.map((item) => ({ type: "income", label: item.memo || item.source, meta: item.source, amount: item.amount })),
+  ];
+  const list = transactions.length
+    ? `<div class="day-transaction-list">${transactions
+        .map(
+          (item) => `<article class="day-transaction ${item.type === "income" ? "is-income" : ""}">
+            <span class="day-transaction-mark">${item.type === "income" ? "+" : categoryMark(item.meta)}</span>
+            <div><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.meta)}</small></div>
+            <b>${item.type === "income" ? "+" : "-"}${store.yen(item.amount)}</b>
+          </article>`
+        )
+        .join("")}</div>`
+    : `<div class="day-empty"><strong>この日の記録はありません</strong><p>支出を追加すると、ここに表示されます。</p><a class="text-action" href="#input" data-route="input">支出を追加 ${icon("arrow")}</a></div>`;
+
+  return `<section class="day-panel${selected ? " is-active" : ""}" data-day-panel="${dateKey}"${selected ? "" : " hidden"} aria-labelledby="day-${dateKey}">
+    <header class="day-panel-header">
+      <div><span>選択した日</span><h2 id="day-${dateKey}">${heading}</h2></div>
+      <div class="day-totals"><span>支出 <b>${store.yen(expenseTotal)}</b></span><span>収入 <b>${store.yen(incomeTotal)}</b></span></div>
+    </header>
+    ${list}
+  </section>`;
+}
+
+function renderCalendar(data) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const days = new Date(year, month + 1, 0).getDate();
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const transactionDates = [...data.monthlyExpenses, ...data.monthlyIncomes]
+    .map((item) => item.date)
+    .filter((date) => date.startsWith(`${year}-${String(month + 1).padStart(2, "0")}`))
+    .sort();
+  const todayKey = monthDateKey(year, month, now.getDate());
+  const selectedDate = transactionDates.includes(todayKey) ? todayKey : transactionDates.at(-1) || todayKey;
+  const dailyTotals = Array.from({ length: days }, (_, index) => {
+    const dateKey = monthDateKey(year, month, index + 1);
+    return data.monthlyExpenses.filter((item) => item.date === dateKey).reduce((sum, item) => sum + item.amount, 0);
+  });
+  const maxDaily = Math.max(...dailyTotals, 1);
+  const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"]
+    .map((day) => `<span class="calendar-weekday">${day}</span>`)
+    .join("");
+  const blanks = Array.from({ length: firstWeekday }, () => '<span class="calendar-blank" aria-hidden="true"></span>').join("");
+  const buttons = Array.from({ length: days }, (_, index) => {
+    const day = index + 1;
+    const dateKey = monthDateKey(year, month, day);
+    const expense = dailyTotals[index];
+    const income = data.monthlyIncomes.filter((item) => item.date === dateKey).reduce((sum, item) => sum + item.amount, 0);
+    const intensity = expense === 0 ? "" : expense / maxDaily > 0.66 ? " is-high" : expense / maxDaily > 0.33 ? " is-medium" : " is-low";
+    const selected = dateKey === selectedDate;
+    const label = `${month + 1}月${day}日。支出${store.yen(expense)}${income ? `、収入${store.yen(income)}` : ""}`;
+    return `<button type="button" class="calendar-day${intensity}${selected ? " is-selected" : ""}" data-calendar-day="${dateKey}" aria-pressed="${selected}" aria-label="${label}">
+      <span class="calendar-day-number">${day}${dateKey === todayKey ? "<i>今日</i>" : ""}</span>
+      ${expense ? `<strong>${store.yen(expense)}</strong>` : '<span class="calendar-day-empty">-</span>'}
+      ${income ? '<i class="income-dot" aria-hidden="true"></i>' : ""}
+    </button>`;
+  }).join("");
+  const details = Array.from({ length: days }, (_, index) => {
+    const dateKey = monthDateKey(year, month, index + 1);
+    return renderDayDetails(data, dateKey, dateKey === selectedDate);
+  }).join("");
+
+  return `<div class="calendar-layout">
+    <section class="calendar-card" aria-labelledby="calendar-month">
+      <header class="calendar-header">
+        <div><span>MONTHLY ACTIVITY</span><h2 id="calendar-month">${year}年 ${month + 1}月</h2></div>
+        <div class="calendar-legend"><span><i></i>支出</span><span><i class="is-income"></i>収入あり</span></div>
+      </header>
+      <div class="calendar-grid">${weekdayLabels}${blanks}${buttons}</div>
+    </section>
+    <aside class="day-detail">${details}</aside>
   </div>`;
 }
 
@@ -198,11 +305,11 @@ function renderCategoryBars(data) {
 }
 
 function manageNavButton(target, iconName, label, meta, current = false) {
-  return `<button class="manage-nav-button ${current ? "is-current" : ""}" type="button" data-manage-target="${target}"${current ? ' aria-current="page"' : ""}>
+  return `<a class="manage-nav-button ${current ? "is-current" : ""}" href="#manage-${target}" data-manage-target="${target}"${current ? ' aria-current="page"' : ""}>
     <span class="manage-nav-icon">${icon(iconName)}</span>
     <span><strong>${label}</strong><small>${meta}</small></span>
     ${icon("arrow")}
-  </button>`;
+  </a>`;
 }
 
 function renderPage(message = "", messageType = "status") {
@@ -223,19 +330,21 @@ function renderPage(message = "", messageType = "status") {
 
   const content = `<div class="app-shell">
     <header class="topbar">
-      <button class="brand" type="button" data-route="home" aria-label="Money Pace ホーム">
+      <a class="brand" href="#home" data-route="home" aria-label="Money Pace ホーム">
         <span>${logoMark()}</span><strong>Money Pace</strong>
-      </button>
+      </a>
       <div class="desktop-actions">
-        <button class="nav-action is-current" type="button" data-route="home" aria-current="page">ホーム</button>
-        <button class="nav-action manage-action" type="button" data-route="manage">${icon("settings")} 管理 ${icon("arrow")}</button>
+        <a class="nav-action is-current" href="#home" data-route="home" aria-current="page">ホーム</a>
+        <a class="nav-action" href="#input" data-route="input">入力</a>
+        <a class="nav-action" href="#history" data-route="history">履歴</a>
+        <a class="nav-action manage-action" href="#manage-expense" data-route="manage">${icon("settings")} 管理 ${icon("arrow")}</a>
       </div>
     </header>
 
     ${message ? `<div class="message toast ${messageType === "error" ? "is-error" : ""}" role="${messageType === "error" ? "alert" : "status"}" aria-live="${messageType === "error" ? "assertive" : "polite"}">${escapeHtml(message)}</div>` : ""}
 
     <main class="view-shell">
-      <section class="app-view is-active" data-view="home" aria-labelledby="home-title">
+      <section class="app-view is-active" id="home" data-view="home" aria-labelledby="home-title">
         <section class="balance-stage">
           <div class="balance-overview">
             <div class="balance-topline">
@@ -265,26 +374,15 @@ function renderPage(message = "", messageType = "status") {
             </div>
           </div>
 
-          <div class="quick-entry quick-command" aria-label="クイック入力">
-            <div class="quick-heading">
-              <div>
-                <span class="eyebrow">クイック入力</span>
-                <h2>支出を1行で追加</h2>
-              </div>
-              <span class="quick-hint">メモ + 金額</span>
+          <div class="home-input-prompt">
+            <span class="eyebrow">QUICK ADD</span>
+            <h2>思い出したら、<br>そのまま送る。</h2>
+            <p>「ラーメン 950」のように、メモと金額だけで追加できます。</p>
+            <a class="btn home-input-button" href="#input" data-route="input">${icon("plus")} 支出を追加</a>
+            <div class="prompt-preview" aria-hidden="true">
+              <span>カフェ 650</span>
+              <span>食費として追加</span>
             </div>
-            <form method="post" action="/quick-expense" class="quick-form">
-              <label class="sr-only" for="quickText">支出を1行で入力</label>
-              <input id="quickText" name="quickText" placeholder="ラーメン 950" autocomplete="off" required>
-              <button class="btn quick-submit" type="submit">追加</button>
-            </form>
-            <div class="quick-chips" aria-label="入力例">
-              <button type="button" data-example="ラーメン 950">ラーメン <b>950</b></button>
-              <button type="button" data-example="電車 420">電車 <b>420</b></button>
-              <button type="button" data-example="Netflix 1490">Netflix <b>1490</b></button>
-              <button type="button" data-example="カフェ 650">カフェ <b>650</b></button>
-            </div>
-            <button class="form-link" type="button" data-go-manage="expense">項目を指定して追加 ${icon("arrow")}</button>
           </div>
         </section>
 
@@ -292,7 +390,7 @@ function renderPage(message = "", messageType = "status") {
           <article class="activity-panel ledger-panel">
             <div class="section-heading">
               <div><span>最近の動き</span><h2>最近の支出</h2></div>
-              <button type="button" class="text-action" data-go-manage="expense">履歴を管理 ${icon("arrow")}</button>
+              <a class="text-action" href="#history" data-route="history">履歴を見る ${icon("arrow")}</a>
             </div>
             ${renderRecentExpenses(data.expenses)}
           </article>
@@ -319,7 +417,51 @@ function renderPage(message = "", messageType = "status") {
         </section>
       </section>
 
-      <section class="app-view manage-view" data-view="manage" aria-labelledby="manage-title">
+      <section class="app-view input-view" id="input" data-view="input" aria-labelledby="input-title">
+        <div class="chat-shell">
+          <header class="chat-header">
+            <div class="chat-profile">
+              <span class="chat-avatar">${logoMark()}</span>
+              <div><h1 id="input-title" tabindex="-1">Money Pace</h1><p><i></i> 支出入力</p></div>
+            </div>
+            <div class="chat-balance"><span>あと使える金額</span><strong>${store.yen(data.remaining)}</strong></div>
+          </header>
+
+          <div class="chat-thread" aria-label="支出入力の会話">
+            <div class="chat-date">${new Date().getMonth() + 1}月${new Date().getDate()}日</div>
+            <article class="chat-message is-assistant">
+              <div class="assistant-avatar">M</div>
+              <div class="chat-bubble"><span>使ったものと金額を送ってください。</span><small>例：ラーメン 950</small></div>
+            </article>
+            ${renderChatExpenses(data.expenses)}
+          </div>
+
+          <div class="quick-entry quick-command">
+            <div class="chat-suggestions quick-chips" aria-label="入力例">
+              <button type="button" data-example="ラーメン 950">ラーメン <b>950</b></button>
+              <button type="button" data-example="電車 420">電車 <b>420</b></button>
+              <button type="button" data-example="Netflix 1490">Netflix <b>1490</b></button>
+              <button type="button" data-example="カフェ 650">カフェ <b>650</b></button>
+            </div>
+            <form method="post" action="/quick-expense" class="chat-composer">
+              <label class="sr-only" for="quickText">支出を1行で入力</label>
+              <input id="quickText" name="quickText" placeholder="メッセージを入力" autocomplete="off" required>
+              <button class="btn quick-submit" type="submit" aria-label="支出を追加">${icon("arrow")}</button>
+            </form>
+            <a class="form-link" href="#manage-expense" data-go-manage="expense">項目を指定して追加 ${icon("arrow")}</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="app-view history-view" id="history" data-view="history" aria-labelledby="history-title">
+        <header class="history-header">
+          <div><span class="eyebrow">CALENDAR</span><h1 id="history-title" tabindex="-1">お金のカレンダー</h1><p>使った日と金額を、月の流れで振り返れます。</p></div>
+          <div class="history-month-total"><span>今月の支出</span><strong>${store.yen(data.expenseTotal)}</strong></div>
+        </header>
+        ${renderCalendar(data)}
+      </section>
+
+      <section class="app-view manage-view" id="manage" data-view="manage" aria-labelledby="manage-title">
         <header class="manage-header">
           <div>
             <span class="eyebrow">月次管理</span>
@@ -349,8 +491,10 @@ function renderPage(message = "", messageType = "status") {
     </main>
 
     <nav class="mobile-nav" aria-label="メインナビゲーション">
-      <button type="button" data-route="home" aria-current="page">${icon("home")}<span>ホーム</span></button>
-      <button type="button" data-route="manage">${icon("settings")}<span>管理</span></button>
+      <a href="#home" data-route="home" aria-current="page">${icon("home")}<span>ホーム</span></a>
+      <a href="#input" data-route="input">${icon("plus")}<span>入力</span></a>
+      <a href="#history" data-route="history">${icon("receipt")}<span>履歴</span></a>
+      <a href="#manage-expense" data-route="manage">${icon("settings")}<span>管理</span></a>
     </nav>
 
     <footer>Money Pace ・ データはサーバー再起動時にリセットされます</footer>
@@ -361,7 +505,7 @@ function renderPage(message = "", messageType = "status") {
 }
 
 function renderExpenseDetails(data) {
-  return `<section class="manage-panel is-active" id="expense-panel" data-manage-panel="expense" aria-labelledby="expense-title">
+  return `<section class="manage-panel is-active" id="manage-expense" data-manage-panel="expense" aria-labelledby="expense-title">
     <header class="panel-header"><div><span>支出管理</span><h2 id="expense-title">支出</h2></div><p>項目を指定して追加し、履歴を確認できます。</p></header>
     <div class="panel-body">
       <form method="post" action="/expenses">
@@ -384,7 +528,7 @@ function renderExpenseDetails(data) {
 }
 
 function renderIncomeDetails(data) {
-  return `<section class="manage-panel" data-manage-panel="income" aria-labelledby="income-title">
+  return `<section class="manage-panel" id="manage-income" data-manage-panel="income" aria-labelledby="income-title">
     <header class="panel-header"><div><span>収入管理</span><h2 id="income-title">収入</h2></div><p>今月の収入を追加し、履歴を管理できます。</p></header>
     <div class="panel-body">
       <form method="post" action="/incomes">
@@ -404,7 +548,7 @@ function renderIncomeDetails(data) {
 }
 
 function renderFixedDetails(data) {
-  return `<section class="manage-panel" data-manage-panel="fixed" aria-labelledby="fixed-title">
+  return `<section class="manage-panel" id="manage-fixed" data-manage-panel="fixed" aria-labelledby="fixed-title">
     <header class="panel-header"><div><span>固定費管理</span><h2 id="fixed-title">固定費</h2></div><p>毎月発生する支払いをまとめて管理します。</p></header>
     <div class="panel-body">
       <form method="post" action="/fixed-costs">
@@ -426,7 +570,7 @@ function renderFixedDetails(data) {
 }
 
 function renderBudgetDetails(data) {
-  return `<section class="manage-panel compact-panel" data-manage-panel="budget" aria-labelledby="budget-title">
+  return `<section class="manage-panel compact-panel" id="manage-budget" data-manage-panel="budget" aria-labelledby="budget-title">
     <header class="panel-header"><div><span>予算設定</span><h2 id="budget-title">予算</h2></div><p>今月使える金額の基準を設定します。</p></header>
     <div class="panel-body">
       <form method="post" action="/budget">
@@ -443,7 +587,7 @@ function renderBudgetDetails(data) {
 function renderAnalysisDetails(data) {
   const hasCategoryData = data.byCategory.some((item) => item.amount > 0);
   const advice = store.advice(data).map((message) => `<li>${escapeHtml(message)}</li>`).join("");
-  return `<section class="manage-panel" data-manage-panel="analysis" aria-labelledby="analysis-title">
+  return `<section class="manage-panel" id="manage-analysis" data-manage-panel="analysis" aria-labelledby="analysis-title">
     <header class="panel-header"><div><span>支出分析</span><h2 id="analysis-title">カテゴリ別支出</h2></div><p>今月の支出をカテゴリごとに比較します。</p></header>
     <div class="panel-body">
       ${hasCategoryData ? `<div class="bars">${renderCategoryBars(data)}</div>` : '<div class="analysis-empty"><strong>分析できる支出がまだありません</strong><p>支出を追加すると、カテゴリごとの使い方をここで確認できます。</p></div>'}
@@ -459,8 +603,10 @@ function renderAnalysisDetails(data) {
 function redirectWithMessage(res, message, type = "status", returnView = "home", returnPanel = "expense") {
   const typeQuery = type === "error" ? "&type=error" : "";
   const allowedPanels = ["expense", "income", "fixed", "budget", "analysis"];
+  const allowedViews = ["home", "input", "history", "manage"];
   const panel = allowedPanels.includes(returnPanel) ? returnPanel : "expense";
-  const hash = returnView === "manage" ? `#manage-${panel}` : "#home";
+  const view = allowedViews.includes(returnView) ? returnView : "home";
+  const hash = view === "manage" ? `#manage-${panel}` : `#${view}`;
   res.redirect("/?message=" + encodeURIComponent(message) + typeQuery + hash);
 }
 
@@ -471,11 +617,11 @@ function showHome(req, res) {
 function createQuickExpense(req, res) {
   const parsed = store.parseQuickExpense(req.body.quickText);
   if (!parsed) {
-    redirectWithMessage(res, "「ラーメン 950」のように、メモと金額を入力してください", "error");
+    redirectWithMessage(res, "「ラーメン 950」のように、メモと金額を入力してください", "error", "input");
     return;
   }
   store.addExpense(parsed);
-  redirectWithMessage(res, `${parsed.memo}を「${parsed.category}」として追加しました`);
+  redirectWithMessage(res, `${parsed.memo}を「${parsed.category}」として追加しました`, "status", "input");
 }
 
 function createExpense(req, res) {

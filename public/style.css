@@ -35,6 +35,8 @@ body {
 }
 
 body[data-route="manage"] { background: #f6f7f8; }
+body[data-route="input"] { background: #edf2ef; }
+body[data-route="history"] { background: #f5f6f7; }
 button, input, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { letter-spacing: 0; }
@@ -94,6 +96,7 @@ svg {
   color: var(--ink);
   background: transparent;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .brand strong { font-size: 16px; font-weight: 720; white-space: nowrap; }
@@ -116,6 +119,7 @@ svg {
   cursor: pointer;
   font-size: 13px;
   font-weight: 630;
+  text-decoration: none;
   transition: color .16s ease, background .16s ease, transform .16s var(--ease);
 }
 
@@ -256,6 +260,7 @@ svg {
 .quick-command.is-launching::after { animation: commandLaunch .54s var(--ease) both; }
 .transaction-complete .quick-command::after { animation: successWash .78s var(--ease) both; }
 .transaction-complete .balance-overview h1:not(.empty-title) { animation: amountSuccess .82s var(--ease) both; }
+.transaction-complete .chat-balance strong { animation: amountSuccess .82s var(--ease) both; }
 .quick-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 22px; }
 
 .eyebrow,
@@ -348,6 +353,7 @@ svg {
   cursor: pointer;
   font-size: 12px;
   font-weight: 630;
+  text-decoration: none;
 }
 
 .form-link { margin-top: 12px; }
@@ -476,6 +482,171 @@ svg {
 .trend-grid { fill: none; stroke: #dfe3e6; stroke-width: 1; }
 .trend-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 220; animation: drawLine .58s var(--ease) both; }
 
+.home-input-prompt {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  padding: 42px 36px;
+  background: #f8faf9;
+}
+
+.home-input-prompt::after {
+  position: absolute;
+  right: -36px;
+  bottom: -58px;
+  width: 190px;
+  height: 190px;
+  border: 34px solid #e6f2ed;
+  border-radius: 50%;
+  content: "";
+  opacity: .72;
+}
+
+.home-input-prompt > * { position: relative; z-index: 1; }
+.home-input-prompt h2 { margin: 0; color: var(--ink); font-size: clamp(28px, 2.4vw, 34px); line-height: 1.1; font-weight: 650; }
+.home-input-prompt p { max-width: 300px; margin: 18px 0 26px; color: var(--muted); font-size: 12px; line-height: 1.75; }
+.home-input-button { display: inline-flex; align-items: center; gap: 8px; padding: 0 17px; }
+.home-input-button svg { width: 16px; height: 16px; }
+.prompt-preview { display: grid; align-self: flex-end; gap: 6px; margin-top: 42px; }
+.prompt-preview span { width: fit-content; padding: 9px 12px; border-radius: 13px 13px 3px 13px; color: #fff; background: var(--accent); font-size: 11px; box-shadow: 0 8px 20px rgba(11, 143, 103, .12); }
+.prompt-preview span:last-child { justify-self: end; border-radius: 3px 13px 13px 13px; color: var(--ink-soft); background: #fff; }
+
+.input-view { padding: 6px 0 14px; }
+.chat-shell {
+  width: min(960px, 100%);
+  min-height: calc(100svh - 144px);
+  display: grid;
+  grid-template-rows: auto minmax(360px, 1fr) auto;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid #cfd8d4;
+  border-radius: var(--radius-lg);
+  background: #e8efec;
+  box-shadow: 0 18px 50px rgba(22, 37, 31, .08);
+}
+
+.chat-header {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #d5ddda;
+  background: rgba(255, 255, 255, .92);
+  backdrop-filter: blur(18px);
+}
+
+.chat-profile { display: flex; align-items: center; gap: 11px; }
+.chat-avatar { width: 40px; height: 40px; display: block; }
+.chat-avatar .brand-mark { width: 40px; height: 40px; }
+.chat-profile h1 { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.2; font-weight: 690; outline: none; }
+.chat-profile p { display: flex; align-items: center; gap: 5px; margin: 4px 0 0; color: var(--muted); font-size: 10px; }
+.chat-profile p i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.chat-balance { display: flex; align-items: baseline; gap: 10px; }
+.chat-balance span { color: var(--muted); font-size: 10px; }
+.chat-balance strong { color: var(--ink); font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+.chat-thread {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  overflow-y: auto;
+  padding: 30px clamp(22px, 6vw, 64px) 34px;
+  scroll-behavior: smooth;
+}
+
+.chat-date { align-self: center; padding: 5px 9px; border-radius: 999px; color: #68736e; background: rgba(255, 255, 255, .72); font-size: 9px; font-weight: 650; }
+.chat-message { display: flex; align-items: flex-end; gap: 8px; animation: bubbleIn .42s var(--ease) both; }
+.chat-message.is-user { justify-content: flex-end; }
+.assistant-avatar { flex: 0 0 28px; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; color: #fff; background: var(--ink); font-size: 10px; font-weight: 720; }
+.chat-bubble { position: relative; width: fit-content; max-width: min(440px, 76%); display: grid; gap: 5px; padding: 12px 14px; border: 1px solid #dce2df; border-radius: 15px 15px 15px 4px; color: var(--ink); background: #fff; box-shadow: 0 4px 16px rgba(22, 37, 31, .04); }
+.chat-message.is-user .chat-bubble { min-width: 150px; border-color: #0b825f; border-radius: 15px 15px 4px 15px; color: #fff; background: var(--accent); box-shadow: 0 8px 20px rgba(11, 143, 103, .14); }
+.chat-bubble span { font-size: 13px; line-height: 1.45; }
+.chat-bubble strong { font-size: 17px; line-height: 1.1; font-weight: 670; font-variant-numeric: tabular-nums; }
+.chat-bubble small { color: var(--muted); font-size: 9px; }
+.chat-message.is-user .chat-bubble small { color: rgba(255, 255, 255, .76); }
+.chat-empty-note { max-width: 310px; align-self: center; margin: auto 0; color: #75807b; font-size: 11px; line-height: 1.7; text-align: center; }
+
+.chat-shell .quick-command { display: block; padding: 12px 20px 15px; border-top: 1px solid #d5ddda; background: rgba(255, 255, 255, .94); backdrop-filter: blur(18px); }
+.chat-shell .quick-command::after { z-index: 0; }
+.chat-suggestions { display: flex; gap: 7px; margin: 0 0 10px; overflow-x: auto; border: 0; scrollbar-width: none; }
+.chat-suggestions::-webkit-scrollbar { display: none; }
+.chat-suggestions button { flex: 0 0 auto; min-height: 34px; gap: 6px; padding: 0 11px; border: 1px solid #d8dedb; border-radius: 999px; color: var(--muted); background: #fff; }
+.chat-suggestions button:hover { border-color: #b8c9c1; background: #f7faf8; }
+.chat-composer { display: grid; grid-template-columns: minmax(0, 1fr) 48px; align-items: center; gap: 8px; }
+.chat-composer input { min-height: 52px; border-color: #ccd6d1; border-radius: 14px; padding: 0 16px; background: #fff; font-size: 15px; }
+.chat-composer .quick-submit { min-width: 48px; width: 48px; height: 48px; min-height: 48px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: var(--accent); }
+.chat-composer .quick-submit:hover { background: var(--accent-dark); transform: translateX(2px); }
+.chat-composer .quick-submit svg { width: 19px; height: 19px; }
+.chat-shell .form-link { min-height: 32px; margin: 5px 0 -6px; font-size: 10px; }
+
+.history-view { max-width: 1160px; margin: 0 auto; padding: 18px 0 12px; }
+.history-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 26px; padding: 0 2px 22px; border-bottom: 1px solid var(--line-strong); }
+.history-header h1 { margin: 0; color: var(--ink); font-size: 34px; line-height: 1; font-weight: 660; outline: none; }
+.history-header p { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+.history-month-total { text-align: right; }
+.history-month-total span { display: block; color: var(--muted); font-size: 10px; }
+.history-month-total strong { display: block; margin-top: 7px; color: var(--ink); font-size: 24px; line-height: 1; font-weight: 650; font-variant-numeric: tabular-nums; }
+.calendar-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(300px, .55fr); gap: 14px; padding-top: 14px; }
+.calendar-card, .day-detail { min-width: 0; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper); box-shadow: 0 1px 2px rgba(17, 20, 24, .025); }
+.calendar-card { overflow: hidden; }
+.calendar-header { min-height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.calendar-header span, .day-panel-header > div > span { color: var(--muted); font-size: 9px; font-weight: 700; }
+.calendar-header h2 { margin: 6px 0 0; color: var(--ink); font-size: 20px; font-weight: 650; }
+.calendar-legend { display: flex; gap: 14px; color: var(--muted); font-size: 9px; }
+.calendar-legend span { display: flex; align-items: center; gap: 5px; }
+.calendar-legend i { width: 7px; height: 7px; border-radius: 2px; background: var(--accent); }
+.calendar-legend i.is-income { border-radius: 50%; background: #3f70bd; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 0 12px 14px; }
+.calendar-weekday { min-height: 38px; display: grid; place-items: center; color: var(--muted); font-size: 9px; font-weight: 650; }
+.calendar-blank { min-height: 82px; border-top: 1px solid var(--line); }
+.calendar-day { position: relative; min-width: 0; min-height: 82px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 10px; border: 0; border-top: 1px solid var(--line); color: var(--ink-soft); background: #fff; cursor: pointer; text-align: left; transition: color .16s ease, background .16s ease, box-shadow .2s var(--ease), transform .16s var(--ease); }
+.calendar-day:hover { z-index: 1; background: #f7f9f8; }
+.calendar-day:active { transform: scale(.98); }
+.calendar-day.is-low { background: #f1f8f5; }
+.calendar-day.is-medium { background: #dff1ea; }
+.calendar-day.is-high { background: #c5e7da; }
+.calendar-day.is-selected { z-index: 2; color: #fff; background: var(--ink); box-shadow: 0 8px 22px rgba(17, 20, 24, .16); transform: translateY(-2px); }
+.calendar-day-number { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 650; }
+.calendar-day-number i { color: var(--accent-dark); font-size: 7px; font-style: normal; }
+.calendar-day.is-selected .calendar-day-number i { color: #8ee0c1; }
+.calendar-day strong { max-width: 100%; overflow: hidden; font-size: 10px; font-weight: 650; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-day-empty { color: #c1c6ca; font-size: 10px; }
+.income-dot { position: absolute; top: 10px; right: 10px; width: 6px; height: 6px; border-radius: 50%; background: #3f70bd; }
+.day-detail { overflow: hidden; background: #fbfcfc; }
+.day-panel { min-height: 100%; padding: 22px; }
+.day-panel.is-active { animation: panelIn .24s var(--ease) both; }
+.day-panel-header { padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.day-panel-header h2 { margin: 6px 0 0; color: var(--ink); font-size: 23px; font-weight: 650; }
+.day-totals { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 19px; }
+.day-totals span { padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--muted); background: #fff; font-size: 9px; }
+.day-totals b { display: block; margin-top: 5px; color: var(--ink); font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.day-transaction-list { display: grid; }
+.day-transaction { min-height: 66px; display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 10px; border-bottom: 1px solid var(--line); }
+.day-transaction-mark { width: 30px; height: 30px; display: grid; place-items: center; border-radius: var(--radius-sm); color: var(--accent-dark); background: var(--accent-soft); font-size: 9px; font-weight: 700; }
+.day-transaction.is-income .day-transaction-mark { color: #2f5c9e; background: #e9f0fb; }
+.day-transaction strong, .day-transaction small { display: block; }
+.day-transaction strong { overflow: hidden; color: var(--ink); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.day-transaction small { margin-top: 3px; color: var(--muted); font-size: 9px; }
+.day-transaction b { color: var(--ink); font-size: 12px; font-weight: 650; white-space: nowrap; }
+.day-transaction.is-income b { color: #2f5c9e; }
+.day-empty { min-height: 260px; display: grid; align-content: center; justify-items: start; }
+.day-empty strong { color: var(--ink); font-size: 13px; }
+.day-empty p { margin: 7px 0 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
+
+.motion-ready .chat-message:nth-of-type(2) { animation-delay: .08s; }
+.motion-ready .chat-message:nth-of-type(3) { animation-delay: .14s; }
+.motion-ready .chat-message:nth-of-type(4) { animation-delay: .2s; }
+.motion-ready .calendar-day { animation: calendarIn .35s var(--ease) both; }
+.motion-ready .calendar-day:nth-of-type(7n + 1) { animation-delay: .03s; }
+.motion-ready .calendar-day:nth-of-type(7n + 2) { animation-delay: .06s; }
+.motion-ready .calendar-day:nth-of-type(7n + 3) { animation-delay: .09s; }
+
 .manage-view { max-width: 1160px; margin: 0 auto; padding: 18px 0 12px; }
 
 .manage-header {
@@ -510,6 +681,7 @@ svg {
   background: transparent;
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
   transition: color .15s ease, background .15s ease, border-color .15s ease, transform .15s var(--ease);
 }
 
@@ -592,7 +764,7 @@ input:focus, select:focus { border-color: var(--accent); box-shadow: var(--focus
 .btn.is-submitting { opacity: .62; cursor: progress; }
 .quick-submit { min-width: 72px; min-height: 50px; }
 
-.ghost { min-height: 40px; padding: 0 9px; color: var(--muted); background: #f0f2f3; }
+.ghost { min-height: 44px; padding: 0 9px; color: var(--muted); background: #f0f2f3; }
 .ghost:hover { color: var(--ink); background: #e8eaec; }
 .ghost.danger { color: var(--danger); background: var(--danger-soft); }
 .inline-form { display: inline; }
@@ -642,12 +814,18 @@ footer { padding: 30px 0 6px; color: var(--muted-light); font-size: 10px; text-a
 .brand:focus-visible,
 .nav-action:focus-visible,
 .manage-nav-button:focus-visible,
-.mobile-nav button:focus-visible,
+.mobile-nav a:focus-visible,
 .btn:focus-visible,
 .ghost:focus-visible,
 .quick-chips button:focus-visible,
 .form-link:focus-visible,
 .text-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.calendar-day:focus-visible,
+.chat-composer input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -665,6 +843,8 @@ footer { padding: 30px 0 6px; color: var(--muted-light); font-size: 10px; text-a
 @keyframes successWash { 0% { opacity: 0; transform: scaleX(0); } 42% { opacity: 1; transform: scaleX(1); } 100% { opacity: 0; transform: scaleX(1); } }
 @keyframes amountSuccess { 0% { opacity: .55; transform: translateY(9px) scale(.96); } 55% { color: var(--accent-dark); transform: translateY(-2px) scale(1.025); } 100% { opacity: 1; color: var(--ink); transform: translateY(0) scale(1); } }
 @keyframes toastIn { 0% { opacity: 0; transform: translate(-50%, -12px) scale(.96); } 60% { opacity: 1; transform: translate(-50%, 2px) scale(1.01); } 100% { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@keyframes bubbleIn { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes calendarIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 1040px) {
   .balance-stage { grid-template-columns: minmax(0, 1.16fr) minmax(320px, .84fr); }
@@ -687,6 +867,8 @@ footer { padding: 30px 0 6px; color: var(--muted-light); font-size: 10px; text-a
   .manage-nav-button > svg { display: none; }
   .panel-header { display: block; }
   .panel-header p { max-width: none; margin-top: 8px; text-align: left; }
+  .calendar-layout { grid-template-columns: 1fr; }
+  .day-detail { min-height: 320px; }
 }
 
 @media (max-width: 760px) {
@@ -713,10 +895,30 @@ footer { padding: 30px 0 6px; color: var(--muted-light); font-size: 10px; text-a
   .pace-item strong { font-size: 22px; }
   .pace-item small { max-width: none; }
 
+  .home-input-prompt { padding: 36px 24px; }
+  .home-input-prompt h2 { font-size: 34px; }
+  .prompt-preview { margin-top: 30px; }
+
   .quick-command { padding: 26px 24px; }
   .ledger-panel, .snapshot-rail { padding: 22px; }
   .snapshot-rail { display: block; }
   .budget-meter { margin: 26px 0 22px; }
+
+  .input-view { padding-top: 0; }
+  .chat-shell { min-height: calc(100svh - 150px); grid-template-rows: auto minmax(330px, 1fr) auto; border-radius: var(--radius-md); }
+  .chat-header { min-height: 68px; padding: 10px 14px; }
+  .chat-balance { display: block; text-align: right; }
+  .chat-balance strong { display: block; margin-top: 3px; font-size: 16px; }
+  .chat-thread { padding: 24px 18px 28px; }
+  .chat-bubble { max-width: 82%; }
+  .chat-shell .quick-command { padding: 10px 12px 13px; }
+
+  .history-view { padding-top: 14px; }
+  .history-header { align-items: flex-start; padding: 2px 2px 18px; }
+  .history-header h1 { font-size: 30px; }
+  .history-month-total strong { font-size: 20px; }
+  .calendar-layout { padding-top: 12px; }
+  .calendar-day, .calendar-blank { min-height: 70px; }
 
   .manage-view { padding-top: 14px; }
   .manage-header { align-items: flex-start; padding: 2px 2px 18px; }
@@ -739,10 +941,10 @@ footer { padding: 30px 0 6px; color: var(--muted-light); font-size: 10px; text-a
     left: 50%;
     bottom: 9px;
     z-index: 40;
-    width: min(330px, calc(100% - 20px));
+    width: min(390px, calc(100% - 20px));
     min-height: 60px;
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 3px;
     padding: 4px;
     border: 1px solid rgba(205, 210, 215, .92);
@@ -753,9 +955,9 @@ footer { padding: 30px 0 6px; color: var(--muted-light); font-size: 10px; text-a
     transform: translateX(-50%);
   }
 
-  .mobile-nav button { min-height: 50px; display: flex; align-items: center; justify-content: center; gap: 7px; border: 0; border-radius: 8px; color: var(--muted); background: transparent; font-size: 11px; font-weight: 650; }
-  .mobile-nav button svg { width: 17px; height: 17px; }
-  .mobile-nav button.is-current { color: #fff; background: var(--ink); }
+  .mobile-nav a { min-width: 0; min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; border-radius: 8px; color: var(--muted); background: transparent; font-size: 9px; font-weight: 650; text-decoration: none; }
+  .mobile-nav a svg { width: 16px; height: 16px; }
+  .mobile-nav a.is-current { color: #fff; background: var(--ink); }
 }
 
 @media (max-width: 520px) {
@@ -770,6 +972,19 @@ footer { padding: 30px 0 6px; color: var(--muted-light); font-size: 10px; text-a
   .grid-2 { grid-template-columns: 1fr; }
   .manage-header { display: block; }
   .manage-budget { margin-top: 16px; padding-top: 15px; border-top: 1px solid var(--line); }
+  .history-header { display: block; }
+  .history-month-total { margin-top: 15px; padding-top: 14px; border-top: 1px solid var(--line); text-align: left; }
+  .calendar-header { align-items: flex-start; padding: 14px 12px; }
+  .calendar-legend { display: grid; gap: 5px; }
+  .calendar-grid { padding: 0 5px 8px; }
+  .calendar-weekday { min-height: 32px; }
+  .calendar-day, .calendar-blank { min-height: 60px; }
+  .calendar-day { padding: 7px 5px; }
+  .calendar-day strong { font-size: 8px; }
+  .calendar-day-number { font-size: 10px; }
+  .calendar-day-number i { display: none; }
+  .income-dot { top: 7px; right: 6px; width: 5px; height: 5px; }
+  .day-panel { padding: 18px; }
 }
 
 @media (max-width: 390px) {
@@ -784,6 +999,15 @@ footer { padding: 30px 0 6px; color: var(--muted-light); font-size: 10px; text-a
   .quick-submit { min-width: 66px; padding: 0 11px; }
   .expense-row b { font-size: 13px; }
   .panel-header, .panel-body { padding-left: 16px; padding-right: 16px; }
+  .home-input-prompt { padding-left: 18px; padding-right: 18px; }
+  .chat-profile h1 { font-size: 14px; }
+  .chat-balance span { font-size: 8px; }
+  .chat-thread { padding-left: 12px; padding-right: 12px; }
+  .chat-shell .quick-command { padding-left: 10px; padding-right: 10px; }
+  .chat-suggestions button { padding: 0 9px; }
+  .chat-composer { grid-template-columns: minmax(0, 1fr) 46px; }
+  .chat-composer input { min-height: 48px; }
+  .chat-composer .quick-submit { min-width: 46px; width: 46px; height: 46px; min-height: 46px; padding: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -6,16 +6,22 @@ const views = Array.from(document.querySelectorAll("[data-view]"));
 const routeButtons = Array.from(document.querySelectorAll("[data-route]"));
 const manageButtons = Array.from(document.querySelectorAll("[data-manage-target]"));
 const managePanels = Array.from(document.querySelectorAll("[data-manage-panel]"));
+const calendarDayButtons = Array.from(document.querySelectorAll("[data-calendar-day]"));
+const dayPanels = Array.from(document.querySelectorAll("[data-day-panel]"));
 const managePanelNames = managePanels.map((panel) => panel.dataset.managePanel);
+const supportedRoutes = new Set(["home", "input", "history", "manage"]);
 let currentManagePanel = "expense";
 
 function readLocation() {
   const match = location.hash.match(/^#manage(?:-(expense|income|fixed|budget|analysis))?$/);
-  return match ? { route: "manage", panel: match[1] || "expense" } : { route: "home", panel: "expense" };
+  if (match) return { route: "manage", panel: match[1] || "expense" };
+  const route = location.hash.replace(/^#/, "");
+  return { route: supportedRoutes.has(route) ? route : "home", panel: "expense" };
 }
 
 function locationHash(route, panel = "expense") {
-  return route === "manage" ? `#manage-${panel}` : "#home";
+  if (route === "manage") return `#manage-${panel}`;
+  return `#${supportedRoutes.has(route) ? route : "home"}`;
 }
 
 function fitBalanceAmount() {
@@ -59,7 +65,7 @@ function setManagePanel(target, options = {}) {
 }
 
 function setRoute(route, options = {}) {
-  const nextRoute = route === "manage" ? "manage" : "home";
+  const nextRoute = supportedRoutes.has(route) ? route : "home";
 
   views.forEach((view) => {
     const active = view.dataset.view === nextRoute;
@@ -84,22 +90,47 @@ function setRoute(route, options = {}) {
 
   window.scrollTo({ top: 0, behavior: "auto" });
 
+  if (nextRoute === "input") {
+    const thread = document.querySelector(".chat-thread");
+    if (thread) thread.scrollTop = thread.scrollHeight;
+  }
+
   if (options.focus) {
-    const heading = document.getElementById(nextRoute === "manage" ? "manage-title" : "home-title");
+    const heading = document.getElementById(`${nextRoute}-title`);
     window.setTimeout(() => heading?.focus({ preventScroll: true }), reduceMotion ? 0 : 180);
   }
 }
 
+function setCalendarDay(date) {
+  calendarDayButtons.forEach((button) => {
+    const selected = button.dataset.calendarDay === date;
+    button.classList.toggle("is-selected", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
+  dayPanels.forEach((panel) => {
+    const selected = panel.dataset.dayPanel === date;
+    panel.hidden = !selected;
+    panel.classList.toggle("is-active", selected);
+  });
+}
+
 routeButtons.forEach((button) => {
-  button.addEventListener("click", () => setRoute(button.dataset.route, { push: true, focus: true }));
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    setRoute(button.dataset.route, { push: true, focus: true });
+  });
 });
 
 manageButtons.forEach((button) => {
-  button.addEventListener("click", () => setManagePanel(button.dataset.manageTarget, { push: true, focus: true }));
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    setManagePanel(button.dataset.manageTarget, { push: true, focus: true });
+  });
 });
 
 document.querySelectorAll("[data-go-manage]").forEach((button) => {
-  button.addEventListener("click", () => {
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
     setManagePanel(button.dataset.goManage);
     setRoute("manage", { push: true, focus: true });
   });
@@ -107,11 +138,15 @@ document.querySelectorAll("[data-go-manage]").forEach((button) => {
 
 document.querySelectorAll("[data-focus-quick]").forEach((trigger) => {
   trigger.addEventListener("click", () => {
-    setRoute("home", { push: true });
+    setRoute("input", { push: true });
     const input = document.getElementById("quickText");
     input?.scrollIntoView({ behavior: scrollBehavior, block: "center" });
     window.setTimeout(() => input?.focus(), reduceMotion ? 0 : 180);
   });
+});
+
+calendarDayButtons.forEach((button) => {
+  button.addEventListener("click", () => setCalendarDay(button.dataset.calendarDay));
 });
 
 document.querySelectorAll("[data-example]").forEach((example) => {
@@ -127,11 +162,17 @@ document.querySelectorAll("[data-example]").forEach((example) => {
 });
 
 document.querySelectorAll("form").forEach((form) => {
-  form.addEventListener("submit", () => {
-    const button = form.querySelector(".btn");
+  form.addEventListener("submit", (event) => {
+    if (form.dataset.submitting === "true") {
+      event.preventDefault();
+      return;
+    }
+    form.dataset.submitting = "true";
+    const button = form.querySelector('button[type="submit"]');
     if (!button) return;
     button.classList.add("is-submitting");
     button.setAttribute("aria-busy", "true");
+    button.disabled = true;
     form.closest(".quick-entry")?.classList.add("is-launching");
   });
 });
