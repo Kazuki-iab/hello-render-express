@@ -31,8 +31,10 @@ function createAccountLinkController(service, config) {
       res.redirect("/?message=" + encodeURIComponent("ログイン方法を接続しました") + "#account");
     } catch (error) {
       res.clearCookie(cookieName, { ...cookieOptions, maxAge: undefined });
-      res.oidc?.logout?.({ returnTo: config.auth0BaseUrl + "/?message=" + encodeURIComponent(error.message) + "&type=error" });
-      if (!res.headersSent) res.redirect("/logout");
+      if (res.oidc?.logout) {
+        return res.oidc.logout({ returnTo: config.auth0BaseUrl + "/?message=" + encodeURIComponent(error.message) + "&type=error" });
+      }
+      return res.redirect("/logout");
     }
   }
 
